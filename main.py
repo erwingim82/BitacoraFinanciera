@@ -12,18 +12,17 @@ def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK
 
     # 1. IMAGEN DE FONDO AL ABRIR LA APP
-    # Asegúrate de tener una imagen en tu proyecto o usar una URL. 
-    # Aquí uso una imagen de ejemplo desde internet.
+    # Carga la imagen local desde la carpeta assets
     page.decoration = ft.BoxDecoration(
         image=ft.DecorationImage(
-            src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=1080", 
+            src="Fondo.jpeg", 
             fit=ft.ImageFit.COVER,
             opacity=0.2 # Oscurecemos un poco para que el texto se lea bien
         )
     )
 
     # ==========================================
-    # RUTA NATIVA BLINDADA (Mantenida de tu código)
+    # RUTA NATIVA BLINDADA
     # ==========================================
     try:
         if page.platform == ft.PagePlatform.ANDROID or page.platform == ft.PagePlatform.IOS:
@@ -158,7 +157,6 @@ def main(page: ft.Page):
         txt_concepto = ft.TextField(label="Concepto (Ej: Quincena, Compra)", border_color=ft.colors.BLUE_400)
         txt_monto = ft.TextField(label="Monto", keyboard_type=ft.KeyboardType.NUMBER, border_color=ft.colors.BLUE_400)
         
-        # Calendario reciclado de tu código original
         def cambiar_fecha(e):
             if selector_fecha.value:
                 boton_fecha.text = selector_fecha.value.strftime("%d/%m/%Y")
@@ -217,14 +215,12 @@ def main(page: ft.Page):
             ]
         )
 
-        # Botón flotante para abrir el registro
         page.floating_action_button = ft.FloatingActionButton(
             icon=ft.icons.ADD, 
             bgcolor=ft.colors.INDIGO_500, 
             on_click=lambda e: page.open(dialogo_registro)
         )
 
-        # Renderizar componentes en pantalla
         page.add(
             ft.Column([
                 tarjeta_balance,
