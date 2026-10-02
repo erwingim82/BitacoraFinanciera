@@ -193,12 +193,14 @@ def main(page: ft.Page):
                 ]
             )
 
+            # --- APP BAR ACTUALIZADO CON BOTÓN DE AL CAMBIO ---
             page.appbar = ft.AppBar(
                 title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD),
                 center_title=True,
                 bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
                 elevation=5,
                 actions=[
+                    ft.IconButton(icon=ft.icons.CURRENCY_EXCHANGE, tooltip="Tasa de Cambio", on_click=lambda e: page.launch_url("https://alcambio.app/")),
                     ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca)),
                     ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
                     ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar Reporte", on_click=lambda e: page.open(dialogo_exportar))
