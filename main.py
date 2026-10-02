@@ -1,6 +1,4 @@
 import flet as ft
-import sqlite3
-import os
 import traceback
 from datetime import datetime
 import urllib.parse 
@@ -11,46 +9,6 @@ def main(page: ft.Page):
         page.window_height = 680
         page.title = "Bitácora Financiera"
         page.theme_mode = ft.ThemeMode.DARK
-
-        # ==========================================
-        # RUTA NATIVA BLINDADA (CORREGIDA PARA PERSISTENCIA)
-        # ==========================================
-        try:
-            if page.platform in [ft.PagePlatform.ANDROID, ft.PagePlatform.IOS]:
-                # FORZAMOS a usar solo el directorio persistente de la app
-                directorio_base = page.get_user_data_dir()
-            else:
-                directorio_base = os.getcwd()
-                
-            os.makedirs(directorio_base, exist_ok=True)
-            DB_NAME = os.path.join(directorio_base, "bitacora_financiera.db")
-        except Exception as e:
-            DB_NAME = "bitacora_financiera.db"
-
-        def inicializar_bd():
-            conexion = sqlite3.connect(DB_NAME)
-            conexion.execute("PRAGMA synchronous = FULL")
-            cursor = conexion.cursor()
-            
-            cursor.execute('''CREATE TABLE IF NOT EXISTS movimientos (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                tipo TEXT,
-                                concepto TEXT,
-                                monto REAL,
-                                fecha TEXT
-                              )''')
-                              
-            cursor.execute('''CREATE TABLE IF NOT EXISTS usuario (
-                                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                nombre TEXT,
-                                apellido TEXT,
-                                correo TEXT,
-                                telefono TEXT
-                              )''')
-            conexion.commit()
-            conexion.close()
-            
-        inicializar_bd()
 
         def notificar(mensaje, color=ft.colors.GREEN_700):
             page.open(ft.SnackBar(ft.Text(mensaje, color=ft.colors.WHITE), bgcolor=color, duration=3000))
@@ -71,12 +29,18 @@ def main(page: ft.Page):
                     return notificar("Por favor completa todos los campos", ft.colors.RED_700)
                 
                 try:
-                    conexion = sqlite3.connect(DB_NAME)
-                    cursor = conexion.cursor()
-                    cursor.execute("INSERT INTO usuario (nombre, apellido, correo, telefono) VALUES (?, ?, ?, ?)", 
-                                   (txt_nombre.value.strip(), txt_apellido.value.strip(), txt_correo.value.strip(), txt_telefono.value.strip()))
-                    conexion.commit()
-                    conexion.close()
+                    # Usamos Client Storage (100% persistente en Android)
+                    page.client_storage.set("usuario", {
+                        "nombre": txt_nombre.value.strip(),
+                        "apellido": txt_apellido.value.strip(),
+                        "correo": txt_correo.value.strip(),
+                        "telefono": txt_telefono.value.strip()
+                    })
+                    
+                    # Inicializar lista de movimientos vacía si no existe
+                    if not page.client_storage.contains_key("movimientos"):
+                        page.client_storage.set("movimientos", [])
+                        
                     notificar("Perfil creado con éxito", ft.colors.GREEN_700)
                     construir_interfaz_principal()
                 except Exception as ex:
@@ -114,11 +78,10 @@ def main(page: ft.Page):
         def construir_interfaz_principal():
             page.clean()
             
-            conexion = sqlite3.connect(DB_NAME)
-            cursor = conexion.cursor()
-            cursor.execute("SELECT nombre, apellido, correo, telefono FROM usuario LIMIT 1")
-            datos_usuario = cursor.fetchone()
-            conexion.close()
+            # Cargar datos del usuario desde el almacenamiento persistente
+            datos_usuario = page.client_storage.get("usuario")
+            if not datos_usuario:
+                return mostrar_registro()
 
             opcion_exportar = ft.Dropdown(
                 label="Enviar reporte mediante:", 
@@ -128,38 +91,34 @@ def main(page: ft.Page):
 
             def procesar_exportacion(e):
                 try:
-                    conexion = sqlite3.connect(DB_NAME)
-                    cursor = conexion.cursor()
-                    cursor.execute("SELECT tipo, concepto, monto, fecha FROM movimientos ORDER BY id ASC")
-                    historial = cursor.fetchall()
-                    conexion.close()
+                    historial = page.client_storage.get("movimientos") or []
 
                     if not historial:
                         return notificar("No hay movimientos registrados para exportar.", ft.colors.ORANGE_700)
 
-                    total_ingresos = sum([m[2] for m in historial if m[0] == "Ingreso"])
-                    total_egresos = sum([m[2] for m in historial if m[0] == "Egreso"])
+                    total_ingresos = sum([m["monto"] for m in historial if m["tipo"] == "Ingreso"])
+                    total_egresos = sum([m["monto"] for m in historial if m["tipo"] == "Egreso"])
                     saldo = total_ingresos - total_egresos
 
                     reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n"
-                    reporte += f"👤 *Usuario:* {datos_usuario[0]} {datos_usuario[1]}\n"
+                    reporte += f"👤 *Usuario:* {datos_usuario['nombre']} {datos_usuario['apellido']}\n"
                     reporte += f"💰 *Saldo Actual:* ${saldo:.2f}\n"
                     reporte += f"📈 *Total Ingresos:* ${total_ingresos:.2f}\n"
                     reporte += f"📉 *Total Egresos:* ${total_egresos:.2f}\n\n"
                     reporte += "*DETALLE DE MOVIMIENTOS:*\n"
                     
                     for mov in historial:
-                        icono = "🟢" if mov[0] == "Ingreso" else "🔴"
-                        reporte += f"{icono} {mov[3]} | {mov[1]}: ${mov[2]:.2f}\n"
+                        icono = "🟢" if mov["tipo"] == "Ingreso" else "🔴"
+                        reporte += f"{icono} {mov['fecha']} | {mov['concepto']}: ${mov['monto']:.2f}\n"
 
                     reporte_codificado = urllib.parse.quote(reporte)
                     page.close(dialogo_exportar)
                     
                     if opcion_exportar.value == "WhatsApp":
-                        tel_limpio = datos_usuario[3].replace('+', '').replace(' ', '')
+                        tel_limpio = datos_usuario['telefono'].replace('+', '').replace(' ', '')
                         page.launch_url(f"https://wa.me/{tel_limpio}?text={reporte_codificado}")
                     else:
-                        page.launch_url(f"mailto:{datos_usuario[2]}?subject=Reporte de Movimientos&body={reporte_codificado}")
+                        page.launch_url(f"mailto:{datos_usuario['correo']}?subject=Reporte de Movimientos&body={reporte_codificado}")
                         
                 except Exception as ex:
                     notificar(f"Error al generar reporte: {ex}", ft.colors.RED_700)
@@ -177,7 +136,7 @@ def main(page: ft.Page):
             )
 
             page.appbar = ft.AppBar(
-                title=ft.Text(f"Bitácora de {datos_usuario[0]}", weight=ft.FontWeight.BOLD),
+                title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD),
                 center_title=True,
                 bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
                 elevation=5,
@@ -212,32 +171,28 @@ def main(page: ft.Page):
             def cargar_datos():
                 lista_movimientos.controls.clear()
                 try:
-                    conexion = sqlite3.connect(DB_NAME)
-                    cursor = conexion.cursor()
-                    cursor.execute("SELECT tipo, concepto, monto, fecha FROM movimientos ORDER BY id DESC")
-                    movimientos = cursor.fetchall()
+                    movimientos = page.client_storage.get("movimientos") or []
                     
                     total_ingresos = 0.0
                     total_egresos = 0.0
 
-                    for mov in movimientos:
-                        tipo, concepto, monto, fecha = mov
-                        
-                        if tipo == "Ingreso":
-                            total_ingresos += monto
+                    # Leemos la lista al revés para que el movimiento más reciente salga arriba
+                    for mov in reversed(movimientos):
+                        if mov["tipo"] == "Ingreso":
+                            total_ingresos += mov["monto"]
                             color_monto = ft.colors.GREEN_400
                             icono = ft.icons.ARROW_UPWARD
                         else:
-                            total_egresos += monto
+                            total_egresos += mov["monto"]
                             color_monto = ft.colors.RED_400
                             icono = ft.icons.ARROW_DOWNWARD
                         
                         lista_movimientos.controls.append(
                             ft.ListTile(
                                 leading=ft.Icon(icono, color=color_monto, size=30),
-                                title=ft.Text(concepto, weight=ft.FontWeight.BOLD),
-                                subtitle=ft.Text(fecha),
-                                trailing=ft.Text(f"${monto:.2f}", color=color_monto, weight=ft.FontWeight.BOLD, size=16),
+                                title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD),
+                                subtitle=ft.Text(mov["fecha"]),
+                                trailing=ft.Text(f"${mov['monto']:.2f}", color=color_monto, weight=ft.FontWeight.BOLD, size=16),
                                 bgcolor=ft.colors.with_opacity(0.7, ft.colors.SURFACE_VARIANT)
                             )
                         )
@@ -252,9 +207,8 @@ def main(page: ft.Page):
                     else:
                         lbl_saldo.color = ft.colors.BLUE_200
 
-                    conexion.close()
                 except Exception as ex:
-                    notificar(f"Error BD: {ex}", ft.colors.RED_500)
+                    notificar(f"Error Cargando: {ex}", ft.colors.RED_500)
                 page.update()
 
             drop_tipo = ft.Dropdown(
@@ -292,12 +246,15 @@ def main(page: ft.Page):
                     return notificar("El monto debe ser numérico", ft.colors.RED_700)
 
                 try:
-                    conexion = sqlite3.connect(DB_NAME)
-                    cursor = conexion.cursor()
-                    cursor.execute("INSERT INTO movimientos (tipo, concepto, monto, fecha) VALUES (?, ?, ?, ?)", 
-                                   (drop_tipo.value, txt_concepto.value, monto_float, boton_fecha.text))
-                    conexion.commit()
-                    conexion.close()
+                    # Obtenemos la lista actual, añadimos el nuevo registro y guardamos
+                    movimientos = page.client_storage.get("movimientos") or []
+                    movimientos.append({
+                        "tipo": drop_tipo.value,
+                        "concepto": txt_concepto.value,
+                        "monto": monto_float,
+                        "fecha": boton_fecha.text
+                    })
+                    page.client_storage.set("movimientos", movimientos)
                     
                     page.close(dialogo_registro)
                     notificar("Registro guardado con éxito", ft.colors.GREEN_700)
@@ -349,13 +306,8 @@ def main(page: ft.Page):
         # ==========================================
         # 3. VERIFICADOR DE ARRANQUE
         # ==========================================
-        conexion = sqlite3.connect(DB_NAME)
-        cursor = conexion.cursor()
-        cursor.execute("SELECT COUNT(*) FROM usuario")
-        usuario_registrado = cursor.fetchone()[0] > 0
-        conexion.close()
-        
-        if usuario_registrado:
+        # Comprueba de forma segura si la llave "usuario" existe en el Client Storage
+        if page.client_storage.contains_key("usuario"):
             construir_interfaz_principal()
         else:
             mostrar_registro()
