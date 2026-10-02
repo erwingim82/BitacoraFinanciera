@@ -21,13 +21,13 @@ jobs:
           flutter-version: '3.22.2'
 
       - name: Instalar Flet Directamente
-        run: pip install flet==0.23.2
+        run: pip install -r requirements.txt
 
       - name: Construir la App (APK)
-        run: flet build apk
+        run: flet build apk --assets-dir assets
 
       - name: Entregar Archivo Final
         uses: actions/upload-artifact@v4
         with:
-          name: FiadoApp-APK
+          name: Bitacora-APK
           path: build/apk/**/*.apk
