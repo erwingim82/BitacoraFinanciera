@@ -3,9 +3,9 @@ import sqlite3
 import os
 import traceback
 from datetime import datetime
+import urllib.parse # Necesario para codificar el texto para WhatsApp y Correo
 
 def main(page: ft.Page):
-    # Envolvemos todo en un try-except. Si falla algo crítico, lo pintará en pantalla.
     try:
         page.window_width = 380
         page.window_height = 680
@@ -13,11 +13,10 @@ def main(page: ft.Page):
         page.theme_mode = ft.ThemeMode.DARK
 
         # ==========================================
-        # RUTA NATIVA BLINDADA MEJORADA (ANDROID)
+        # RUTA NATIVA BLINDADA
         # ==========================================
         try:
             if page.platform in [ft.PagePlatform.ANDROID, ft.PagePlatform.IOS]:
-                # os.environ.get("HOME") es el directorio interno más seguro en Android para SQLite
                 directorio_base = os.environ.get("HOME", page.get_user_data_dir())
             else:
                 directorio_base = os.getcwd()
@@ -25,19 +24,29 @@ def main(page: ft.Page):
             os.makedirs(directorio_base, exist_ok=True)
             DB_NAME = os.path.join(directorio_base, "bitacora_financiera.db")
         except Exception as e:
-            # Si falla, forzamos ruta relativa
             DB_NAME = "bitacora_financiera.db"
 
         def inicializar_bd():
             conexion = sqlite3.connect(DB_NAME)
             conexion.execute("PRAGMA synchronous = FULL")
             cursor = conexion.cursor()
+            
+            # Tabla original de movimientos
             cursor.execute('''CREATE TABLE IF NOT EXISTS movimientos (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 tipo TEXT,
                                 concepto TEXT,
                                 monto REAL,
                                 fecha TEXT
+                              )''')
+                              
+            # NUEVA Tabla de perfil de usuario
+            cursor.execute('''CREATE TABLE IF NOT EXISTS usuario (
+                                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                nombre TEXT,
+                                apellido TEXT,
+                                correo TEXT,
+                                telefono TEXT
                               )''')
             conexion.commit()
             conexion.close()
@@ -48,16 +57,140 @@ def main(page: ft.Page):
             page.open(ft.SnackBar(ft.Text(mensaje, color=ft.colors.WHITE), bgcolor=color, duration=3000))
 
         # ==========================================
-        # INTERFAZ PRINCIPAL DE LA BITÁCORA
+        # 1. PANTALLA DE REGISTRO DE USUARIO
+        # ==========================================
+        def mostrar_registro():
+            page.clean()
+            
+            txt_nombre = ft.TextField(label="Nombre", border_color=ft.colors.BLUE_400)
+            txt_apellido = ft.TextField(label="Apellido", border_color=ft.colors.BLUE_400)
+            txt_correo = ft.TextField(label="Correo Electrónico", keyboard_type=ft.KeyboardType.EMAIL, border_color=ft.colors.BLUE_400)
+            txt_telefono = ft.TextField(label="Teléfono (Ej: +584140124578)", keyboard_type=ft.KeyboardType.PHONE, border_color=ft.colors.BLUE_400)
+
+            def guardar_usuario(e):
+                if not all([txt_nombre.value, txt_apellido.value, txt_correo.value, txt_telefono.value]):
+                    return notificar("Por favor completa todos los campos", ft.colors.RED_700)
+                
+                try:
+                    conexion = sqlite3.connect(DB_NAME)
+                    cursor = conexion.cursor()
+                    cursor.execute("INSERT INTO usuario (nombre, apellido, correo, telefono) VALUES (?, ?, ?, ?)", 
+                                   (txt_nombre.value.strip(), txt_apellido.value.strip(), txt_correo.value.strip(), txt_telefono.value.strip()))
+                    conexion.commit()
+                    conexion.close()
+                    notificar("Perfil creado con éxito", ft.colors.GREEN_700)
+                    construir_interfaz_principal()
+                except Exception as ex:
+                    notificar(f"Error al guardar: {ex}", ft.colors.RED_700)
+
+            tarjeta_registro = ft.Card(
+                elevation=8,
+                color=ft.colors.with_opacity(0.85, ft.colors.BLUE_GREY_900),
+                content=ft.Container(
+                    padding=20,
+                    content=ft.Column([
+                        ft.Text("Bienvenido a tu Bitácora", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE),
+                        ft.Text("Configura tu perfil para poder exportar tus reportes.", size=14, color=ft.colors.WHITE70),
+                        ft.Divider(color=ft.colors.TRANSPARENT),
+                        txt_nombre,
+                        txt_apellido,
+                        txt_correo,
+                        txt_telefono,
+                        ft.FilledButton("Guardar y Entrar", on_click=guardar_usuario, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500), width=300)
+                    ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
+                )
+            )
+
+            imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.2)
+            page.add(
+                ft.Stack([
+                    ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center),
+                    ft.Container(content=tarjeta_registro, alignment=ft.alignment.center, padding=20)
+                ], expand=True)
+            )
+
+        # ==========================================
+        # 2. INTERFAZ PRINCIPAL Y EXPORTACIÓN
         # ==========================================
         def construir_interfaz_principal():
             page.clean()
             
+            # Consultamos los datos del usuario registrado
+            conexion = sqlite3.connect(DB_NAME)
+            cursor = conexion.cursor()
+            cursor.execute("SELECT nombre, apellido, correo, telefono FROM usuario LIMIT 1")
+            datos_usuario = cursor.fetchone()
+            conexion.close()
+
+            # --- LÓGICA DE EXPORTACIÓN ---
+            opcion_exportar = ft.Dropdown(
+                label="Enviar reporte mediante:", 
+                options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")],
+                value="WhatsApp", border_color=ft.colors.BLUE_400
+            )
+
+            def procesar_exportacion(e):
+                try:
+                    conexion = sqlite3.connect(DB_NAME)
+                    cursor = conexion.cursor()
+                    cursor.execute("SELECT tipo, concepto, monto, fecha FROM movimientos ORDER BY id ASC")
+                    historial = cursor.fetchall()
+                    conexion.close()
+
+                    if not historial:
+                        return notificar("No hay movimientos registrados para exportar.", ft.colors.ORANGE_700)
+
+                    # Calcular totales para el reporte
+                    total_ingresos = sum([m[2] for m in historial if m[0] == "Ingreso"])
+                    total_egresos = sum([m[2] for m in historial if m[0] == "Egreso"])
+                    saldo = total_ingresos - total_egresos
+
+                    # Construir el texto del reporte
+                    reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n"
+                    reporte += f"👤 *Usuario:* {datos_usuario[0]} {datos_usuario[1]}\n"
+                    reporte += f"💰 *Saldo Actual:* ${saldo:.2f}\n"
+                    reporte += f"📈 *Total Ingresos:* ${total_ingresos:.2f}\n"
+                    reporte += f"📉 *Total Egresos:* ${total_egresos:.2f}\n\n"
+                    reporte += "*DETALLE DE MOVIMIENTOS:*\n"
+                    
+                    for mov in historial:
+                        icono = "🟢" if mov[0] == "Ingreso" else "🔴"
+                        reporte += f"{icono} {mov[3]} | {mov[1]}: ${mov[2]:.2f}\n"
+
+                    reporte_codificado = urllib.parse.quote(reporte)
+                    page.close(dialogo_exportar)
+                    
+                    if opcion_exportar.value == "WhatsApp":
+                        tel_limpio = datos_usuario[3].replace('+', '').replace(' ', '')
+                        # Enviaremos el reporte al número registrado (actúa como un chat de respaldo personal)
+                        page.launch_url(f"https://wa.me/{tel_limpio}?text={reporte_codificado}")
+                    else:
+                        page.launch_url(f"mailto:{datos_usuario[2]}?subject=Reporte de Movimientos&body={reporte_codificado}")
+                        
+                except Exception as ex:
+                    notificar(f"Error al generar reporte: {ex}", ft.colors.RED_700)
+
+            dialogo_exportar = ft.AlertDialog(
+                title=ft.Text("Exportar Movimientos"), 
+                content=ft.Column([
+                    ft.Text("Genera un reporte detallado de tus finanzas."),
+                    opcion_exportar
+                ], tight=True), 
+                actions=[
+                    ft.FilledButton("Compartir", on_click=procesar_exportacion, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500)), 
+                    ft.TextButton("Cancelar", on_click=lambda e: page.close(dialogo_exportar))
+                ]
+            )
+
+            # AppBar ahora muestra el nombre del usuario y el botón de compartir
             page.appbar = ft.AppBar(
-                title=ft.Text("Mi Bitácora", weight=ft.FontWeight.BOLD),
+                title=ft.Text(f"Bitácora de {datos_usuario[0]}", weight=ft.FontWeight.BOLD),
                 center_title=True,
                 bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
-                elevation=5
+                elevation=5,
+                actions=[
+                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar Reporte", on_click=lambda e: page.open(dialogo_exportar))
+                ]
             )
 
             lbl_saldo = ft.Text("$0.00", size=30, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
@@ -203,13 +336,7 @@ def main(page: ft.Page):
                 on_click=lambda e: page.open(dialogo_registro)
             )
 
-            # --- FONDO ESTABLE (STACK EN LUGAR DE BOXDECORATION) ---
-            # En Android, ft.Image es mucho más seguro para assets locales
-            imagen_fondo = ft.Image(
-                src="Fondo.jpeg",
-                fit=ft.ImageFit.COVER,
-                opacity=0.2,
-            )
+            imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.2)
 
             contenido_principal = ft.Column([
                 tarjeta_balance,
@@ -217,7 +344,6 @@ def main(page: ft.Page):
                 lista_movimientos
             ], expand=True)
 
-            # Usamos un Stack para superponer el contenido sobre la imagen
             page.add(
                 ft.Stack([
                     ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center),
@@ -227,11 +353,22 @@ def main(page: ft.Page):
             
             cargar_datos()
 
-        construir_interfaz_principal()
+        # ==========================================
+        # 3. VERIFICADOR DE ARRANQUE
+        # ==========================================
+        conexion = sqlite3.connect(DB_NAME)
+        cursor = conexion.cursor()
+        cursor.execute("SELECT COUNT(*) FROM usuario")
+        usuario_registrado = cursor.fetchone()[0] > 0
+        conexion.close()
+        
+        # Si el usuario existe mostramos el dashboard, de lo contrario pedimos registro
+        if usuario_registrado:
+            construir_interfaz_principal()
+        else:
+            mostrar_registro()
 
     except Exception as e:
-        # ===== SISTEMA ANTI-PANTALLA NEGRA =====
-        # Atrapa errores silenciosos y los dibuja en pantalla
         error_trace = traceback.format_exc()
         page.clean()
         page.add(
