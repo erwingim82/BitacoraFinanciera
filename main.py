@@ -29,7 +29,6 @@ def main(page: ft.Page):
                     return notificar("Por favor completa todos los campos", ft.colors.RED_700)
                 
                 try:
-                    # Usamos Client Storage (100% persistente en Android)
                     page.client_storage.set("usuario", {
                         "nombre": txt_nombre.value.strip(),
                         "apellido": txt_apellido.value.strip(),
@@ -37,7 +36,6 @@ def main(page: ft.Page):
                         "telefono": txt_telefono.value.strip()
                     })
                     
-                    # Inicializar lista de movimientos vacía si no existe
                     if not page.client_storage.contains_key("movimientos"):
                         page.client_storage.set("movimientos", [])
                         
@@ -78,11 +76,53 @@ def main(page: ft.Page):
         def construir_interfaz_principal():
             page.clean()
             
-            # Cargar datos del usuario desde el almacenamiento persistente
             datos_usuario = page.client_storage.get("usuario")
             if not datos_usuario:
                 return mostrar_registro()
 
+            # --- MÓDULO DE CALCULADORA ---
+            txt_pantalla_calc = ft.TextField(value="0", text_align=ft.TextAlign.RIGHT, read_only=True, border_color=ft.colors.BLUE_400, text_size=20)
+
+            def click_calculadora(e):
+                tecla = e.control.data
+                if tecla == "C":
+                    txt_pantalla_calc.value = "0"
+                elif tecla == "=":
+                    try:
+                        # Evalúa la expresión matemática escrita en la pantalla
+                        resultado = str(eval(txt_pantalla_calc.value))
+                        txt_pantalla_calc.value = resultado
+                    except Exception:
+                        txt_pantalla_calc.value = "Error"
+                else:
+                    if txt_pantalla_calc.value == "0" or txt_pantalla_calc.value == "Error":
+                        txt_pantalla_calc.value = tecla
+                    else:
+                        txt_pantalla_calc.value += tecla
+                page.update()
+
+            def crear_boton_calc(texto, color_fondo=ft.colors.SURFACE_VARIANT):
+                return ft.ElevatedButton(
+                    text=texto, data=texto, on_click=click_calculadora, 
+                    style=ft.ButtonStyle(bgcolor=color_fondo, color=ft.colors.WHITE), expand=True
+                )
+
+            dialogo_calculadora = ft.AlertDialog(
+                title=ft.Text("Calculadora", weight=ft.FontWeight.BOLD),
+                content=ft.Container(
+                    width=250,
+                    content=ft.Column([
+                        txt_pantalla_calc,
+                        ft.Row([crear_boton_calc("7"), crear_boton_calc("8"), crear_boton_calc("9"), crear_boton_calc("/", ft.colors.INDIGO_500)]),
+                        ft.Row([crear_boton_calc("4"), crear_boton_calc("5"), crear_boton_calc("6"), crear_boton_calc("*", ft.colors.INDIGO_500)]),
+                        ft.Row([crear_boton_calc("1"), crear_boton_calc("2"), crear_boton_calc("3"), crear_boton_calc("-", ft.colors.INDIGO_500)]),
+                        ft.Row([crear_boton_calc("C", ft.colors.RED_400), crear_boton_calc("0"), crear_boton_calc("="), crear_boton_calc("+", ft.colors.INDIGO_500)]),
+                    ], tight=True)
+                ),
+                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_calculadora))]
+            )
+
+            # --- MÓDULO DE EXPORTACIÓN ---
             opcion_exportar = ft.Dropdown(
                 label="Enviar reporte mediante:", 
                 options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")],
@@ -141,6 +181,7 @@ def main(page: ft.Page):
                 bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
                 elevation=5,
                 actions=[
+                    ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
                     ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar Reporte", on_click=lambda e: page.open(dialogo_exportar))
                 ]
             )
@@ -176,7 +217,6 @@ def main(page: ft.Page):
                     total_ingresos = 0.0
                     total_egresos = 0.0
 
-                    # Leemos la lista al revés para que el movimiento más reciente salga arriba
                     for mov in reversed(movimientos):
                         if mov["tipo"] == "Ingreso":
                             total_ingresos += mov["monto"]
@@ -246,7 +286,6 @@ def main(page: ft.Page):
                     return notificar("El monto debe ser numérico", ft.colors.RED_700)
 
                 try:
-                    # Obtenemos la lista actual, añadimos el nuevo registro y guardamos
                     movimientos = page.client_storage.get("movimientos") or []
                     movimientos.append({
                         "tipo": drop_tipo.value,
@@ -306,7 +345,6 @@ def main(page: ft.Page):
         # ==========================================
         # 3. VERIFICADOR DE ARRANQUE
         # ==========================================
-        # Comprueba de forma segura si la llave "usuario" existe en el Client Storage
         if page.client_storage.contains_key("usuario"):
             construir_interfaz_principal()
         else:
