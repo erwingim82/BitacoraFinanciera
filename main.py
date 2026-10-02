@@ -3,7 +3,7 @@ import sqlite3
 import os
 import traceback
 from datetime import datetime
-import urllib.parse # Necesario para codificar el texto para WhatsApp y Correo
+import urllib.parse 
 
 def main(page: ft.Page):
     try:
@@ -13,11 +13,12 @@ def main(page: ft.Page):
         page.theme_mode = ft.ThemeMode.DARK
 
         # ==========================================
-        # RUTA NATIVA BLINDADA
+        # RUTA NATIVA BLINDADA (CORREGIDA PARA PERSISTENCIA)
         # ==========================================
         try:
             if page.platform in [ft.PagePlatform.ANDROID, ft.PagePlatform.IOS]:
-                directorio_base = os.environ.get("HOME", page.get_user_data_dir())
+                # FORZAMOS a usar solo el directorio persistente de la app
+                directorio_base = page.get_user_data_dir()
             else:
                 directorio_base = os.getcwd()
                 
@@ -31,7 +32,6 @@ def main(page: ft.Page):
             conexion.execute("PRAGMA synchronous = FULL")
             cursor = conexion.cursor()
             
-            # Tabla original de movimientos
             cursor.execute('''CREATE TABLE IF NOT EXISTS movimientos (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 tipo TEXT,
@@ -40,7 +40,6 @@ def main(page: ft.Page):
                                 fecha TEXT
                               )''')
                               
-            # NUEVA Tabla de perfil de usuario
             cursor.execute('''CREATE TABLE IF NOT EXISTS usuario (
                                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                                 nombre TEXT,
@@ -115,14 +114,12 @@ def main(page: ft.Page):
         def construir_interfaz_principal():
             page.clean()
             
-            # Consultamos los datos del usuario registrado
             conexion = sqlite3.connect(DB_NAME)
             cursor = conexion.cursor()
             cursor.execute("SELECT nombre, apellido, correo, telefono FROM usuario LIMIT 1")
             datos_usuario = cursor.fetchone()
             conexion.close()
 
-            # --- LÓGICA DE EXPORTACIÓN ---
             opcion_exportar = ft.Dropdown(
                 label="Enviar reporte mediante:", 
                 options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")],
@@ -140,12 +137,10 @@ def main(page: ft.Page):
                     if not historial:
                         return notificar("No hay movimientos registrados para exportar.", ft.colors.ORANGE_700)
 
-                    # Calcular totales para el reporte
                     total_ingresos = sum([m[2] for m in historial if m[0] == "Ingreso"])
                     total_egresos = sum([m[2] for m in historial if m[0] == "Egreso"])
                     saldo = total_ingresos - total_egresos
 
-                    # Construir el texto del reporte
                     reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n"
                     reporte += f"👤 *Usuario:* {datos_usuario[0]} {datos_usuario[1]}\n"
                     reporte += f"💰 *Saldo Actual:* ${saldo:.2f}\n"
@@ -162,7 +157,6 @@ def main(page: ft.Page):
                     
                     if opcion_exportar.value == "WhatsApp":
                         tel_limpio = datos_usuario[3].replace('+', '').replace(' ', '')
-                        # Enviaremos el reporte al número registrado (actúa como un chat de respaldo personal)
                         page.launch_url(f"https://wa.me/{tel_limpio}?text={reporte_codificado}")
                     else:
                         page.launch_url(f"mailto:{datos_usuario[2]}?subject=Reporte de Movimientos&body={reporte_codificado}")
@@ -182,7 +176,6 @@ def main(page: ft.Page):
                 ]
             )
 
-            # AppBar ahora muestra el nombre del usuario y el botón de compartir
             page.appbar = ft.AppBar(
                 title=ft.Text(f"Bitácora de {datos_usuario[0]}", weight=ft.FontWeight.BOLD),
                 center_title=True,
@@ -362,7 +355,6 @@ def main(page: ft.Page):
         usuario_registrado = cursor.fetchone()[0] > 0
         conexion.close()
         
-        # Si el usuario existe mostramos el dashboard, de lo contrario pedimos registro
         if usuario_registrado:
             construir_interfaz_principal()
         else:
