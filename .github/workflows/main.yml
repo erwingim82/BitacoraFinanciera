@@ -24,7 +24,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Construir la App (APK)
-        run: flet build apk --assets-dir assets
+        run: flet build apk
 
       - name: Entregar Archivo Final
         uses: actions/upload-artifact@v4
