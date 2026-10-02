@@ -71,7 +71,7 @@ def main(page: ft.Page):
             )
 
         # ==========================================
-        # 2. INTERFAZ PRINCIPAL Y EXPORTACIÓN
+        # 2. INTERFAZ PRINCIPAL, CALCULADORA Y EXPORTACIÓN
         # ==========================================
         def construir_interfaz_principal():
             page.clean()
@@ -79,6 +79,25 @@ def main(page: ft.Page):
             datos_usuario = page.client_storage.get("usuario")
             if not datos_usuario:
                 return mostrar_registro()
+                
+            # --- MÓDULO ACERCA DE ---
+            dialogo_acerca = ft.AlertDialog(
+                title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
+                content=ft.Column([
+                    ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text("Versión 1.0\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales de forma rápida y segura.", size=14, text_align=ft.TextAlign.CENTER),
+                    ft.Divider(color=ft.colors.TRANSPARENT, height=10),
+                    ft.TextButton(
+                        content=ft.Row([
+                            ft.Icon(ft.icons.EMAIL, color=ft.colors.BLUE_400),
+                            ft.Text("Sugerencias y Soporte", color=ft.colors.BLUE_400)
+                        ], alignment=ft.MainAxisAlignment.CENTER, tight=True),
+                        on_click=lambda e: page.launch_url("mailto:myconsultingsca@gmail.com?subject=Sugerencias App Bitácora")
+                    )
+                ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
+                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))],
+                actions_alignment=ft.MainAxisAlignment.CENTER
+            )
 
             # --- MÓDULO DE CALCULADORA ---
             txt_pantalla_calc = ft.TextField(value="0", text_align=ft.TextAlign.RIGHT, read_only=True, border_color=ft.colors.BLUE_400, text_size=20)
@@ -89,7 +108,6 @@ def main(page: ft.Page):
                     txt_pantalla_calc.value = "0"
                 elif tecla == "=":
                     try:
-                        # Evalúa la expresión matemática escrita en la pantalla
                         resultado = str(eval(txt_pantalla_calc.value))
                         txt_pantalla_calc.value = resultado
                     except Exception:
@@ -181,6 +199,7 @@ def main(page: ft.Page):
                 bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
                 elevation=5,
                 actions=[
+                    ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca)),
                     ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
                     ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar Reporte", on_click=lambda e: page.open(dialogo_exportar))
                 ]
