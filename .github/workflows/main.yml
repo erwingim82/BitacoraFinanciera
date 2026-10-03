@@ -23,34 +23,32 @@ jobs:
       - name: Instalar Flet Directamente
         run: pip install -r requirements.txt
 
-      - name: Construir la App (APK y AAB)
+      - name: Construir la App (APK y AAB en modo Release)
         run: |
           flet build apk
-          flet build aab --org com.erwingim --project bitacorafinanciera
+          flet build aab --release --org com.erwingim --project bitacorafinanciera
 
-      - name: Firmar el AAB con Bundletool (Oficial de Google)
+      - name: Firmar el archivo AAB correctamente para Google Play
         run: |
-          # Descargar bundletool oficial
-          curl -L -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
+          AAB_FILE=$(find build/aab -name "*.aab" | head -n 1)
           
-          # Localizar el archivo AAB generado
-          AAB_ORIGINAL=$(find build/aab -name "*.aab" | head -n 1)
-          AAB_FIRMADO="build/aab/Bitacora-Oficial.aab"
+          # Limpiar firmas genéricas previas
+          zip -d "$AAB_FILE" META-INF/\* || true
           
-          # Firmar correctamente con la herramienta de Google
-          java -jar bundletool.jar sign \
-            --bundle="$AAB_ORIGINAL" \
-            --output="$AAB_FIRMADO" \
-            --ks=bitacora-key.keystore \
-            --ks-pass=pass:bitacora2026 \
-            --ks-key-alias=bitacora \
-            --key-pass=pass:bitacora2026
+          # Firmar usando jarsigner con los estándares de Google Play
+          jarsigner -verbose \
+            -sigalg SHA256withRSA \
+            -digestalg SHA-256 \
+            -keystore bitacora-key.keystore \
+            -storepass bitacora2026 \
+            -keypass bitacora2026 \
+            "$AAB_FILE" bitacora
 
       - name: Entregar Archivo AAB Oficial
         uses: actions/upload-artifact@v4
         with:
           name: Bitacora-AAB-Oficial
-          path: build/aab/Bitacora-Oficial.aab
+          path: build/aab/**/*.aab
 
       - name: Entregar Archivo APK
         uses: actions/upload-artifact@v4
