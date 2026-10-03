@@ -15,15 +15,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar Flet (Actualizado)
+      - name: Instalar Motor Android (Flutter y Licencias)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+
+      - name: Instalar Flet en el Servidor
         run: |
-          pip install -r requirements.txt
           pip install --upgrade flet
+
+      - name: Limpiar dependencias de escritorio
+        run: |
+          # Evita que intente instalar "watchdog" y otras librerías de PC en el celular
+          echo "" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk
-          yes | flet build aab --org com.erwingim --project bitacorafinanciera
+          flet build apk
+          flet build aab --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
