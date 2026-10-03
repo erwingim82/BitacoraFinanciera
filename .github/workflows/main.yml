@@ -26,13 +26,12 @@ jobs:
 
       - name: Limpiar dependencias de escritorio
         run: |
-          # Evita que intente instalar "watchdog" y otras librerías de PC en el celular
           echo "" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          flet build apk
-          flet build aab --org com.erwingim --project bitacorafinanciera
+          flet build apk --build-version "1.0.1" --build-number 2
+          flet build aab --build-version "1.0.1" --build-number 2 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
