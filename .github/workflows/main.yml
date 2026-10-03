@@ -26,13 +26,12 @@ jobs:
 
       - name: Configurar dependencias exactas para Android
         run: |
-          # En Flet 0.25 el motor se auto-empaqueta perfecto. Solo agregamos certifi.
           echo "certifi" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.4" --build-number 5
-          yes | flet build aab --build-version "1.0.4" --build-number 5 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.5" --build-number 6
+          yes | flet build aab --build-version "1.0.5" --build-number 6 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
