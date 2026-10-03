@@ -193,6 +193,92 @@ def main(page: ft.Page):
                 ]
             )
 
+            # --- MÓDULO EXPLORADOR DE HISTÓRICO FILTRADO ---
+            meses_dict = {"Todos": "Todos", "Enero": "01", "Febrero": "02", "Marzo": "03", "Abril": "04", "Mayo": "05", "Junio": "06", "Julio": "07", "Agosto": "08", "Septiembre": "09", "Octubre": "10", "Noviembre": "11", "Diciembre": "12"}
+            
+            drop_filtro_mes = ft.Dropdown(
+                label="Filtrar por Mes",
+                options=[ft.dropdown.Option(mes) for mes in meses_dict.keys()],
+                value="Todos", width=140, border_color=ft.colors.BLUE_400
+            )
+            
+            drop_filtro_anio = ft.Dropdown(
+                label="Año",
+                options=[ft.dropdown.Option("Todos")] + [ft.dropdown.Option(str(y)) for y in range(2024, 2031)],
+                value="Todos", width=100, border_color=ft.colors.BLUE_400
+            )
+
+            lista_historial_detallado = ft.ListView(expand=True, spacing=5)
+            lbl_resumen_filtro = ft.Text("...", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
+
+            def actualizar_historial_filtrado(e=None):
+                lista_historial_detallado.controls.clear()
+                movimientos = page.client_storage.get("movimientos") or []
+                ing = 0.0
+                egr = 0.0
+
+                for mov in reversed(movimientos):
+                    # Separar fecha (asumiendo formato DD/MM/YYYY)
+                    try:
+                        dia, mes, anio = mov["fecha"].split("/")
+                    except:
+                        continue
+                    
+                    filtro_mes = meses_dict[drop_filtro_mes.value]
+                    if filtro_mes != "Todos" and mes != filtro_mes:
+                        continue
+                    if drop_filtro_anio.value != "Todos" and anio != drop_filtro_anio.value:
+                        continue
+                    
+                    if mov["tipo"] == "Ingreso":
+                        ing += mov["monto"]
+                        color = ft.colors.GREEN_400
+                        icono = ft.icons.ARROW_UPWARD
+                    else:
+                        egr += mov["monto"]
+                        color = ft.colors.RED_400
+                        icono = ft.icons.ARROW_DOWNWARD
+                    
+                    lista_historial_detallado.controls.append(
+                        ft.ListTile(
+                            leading=ft.Icon(icono, color=color, size=24),
+                            title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD, size=14),
+                            subtitle=ft.Text(mov["fecha"], size=12),
+                            trailing=ft.Text(f"${mov['monto']:.2f}", color=color, weight=ft.FontWeight.BOLD),
+                            bgcolor=ft.colors.with_opacity(0.3, ft.colors.SURFACE_VARIANT),
+                            dense=True
+                        )
+                    )
+
+                saldo_periodo = ing - egr
+                color_saldo = ft.colors.BLUE_200 if saldo_periodo >= 0 else ft.colors.RED_200
+                lbl_resumen_filtro.value = f"Ingresos: ${ing:.2f}  |  Egresos: ${egr:.2f}\nSaldo del Período: ${saldo_periodo:.2f}"
+                lbl_resumen_filtro.color = color_saldo
+                page.update()
+
+            drop_filtro_mes.on_change = actualizar_historial_filtrado
+            drop_filtro_anio.on_change = actualizar_historial_filtrado
+
+            dialogo_historico = ft.AlertDialog(
+                title=ft.Text("Histórico Detallado", weight=ft.FontWeight.BOLD),
+                content=ft.Container(
+                    width=320,
+                    height=500,
+                    content=ft.Column([
+                        ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10),
+                        ft.Divider(),
+                        lista_historial_detallado
+                    ])
+                ),
+                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))]
+            )
+
+            def abrir_ventana_historico(e):
+                actualizar_historial_filtrado()
+                page.open(dialogo_historico)
+
+
             # --- APP BAR ACTUALIZADO CON BOTÓN DE AL CAMBIO ---
             page.appbar = ft.AppBar(
                 title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD),
@@ -348,10 +434,24 @@ def main(page: ft.Page):
 
             imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.2)
 
+            # --- BOTÓN INFERIOR DE HISTORIAL ---
+            boton_historial = ft.Container(
+                content=ft.FilledButton(
+                    "Ver Historial Detallado",
+                    icon=ft.icons.MANAGE_SEARCH,
+                    style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500),
+                    on_click=abrir_ventana_historico,
+                    width=300
+                ),
+                padding=10,
+                alignment=ft.alignment.center
+            )
+
             contenido_principal = ft.Column([
                 tarjeta_balance,
                 ft.Container(content=ft.Text("Historial de Movimientos", weight=ft.FontWeight.BOLD), padding=10),
-                lista_movimientos
+                lista_movimientos,
+                boton_historial  # Agregado al final de la columna principal
             ], expand=True)
 
             page.add(
