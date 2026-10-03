@@ -1,4 +1,4 @@
-name: Compilar AAB Android
+name: Generar Firma Digital
 
 on:
   workflow_dispatch:
@@ -7,27 +7,11 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Obtener archivos del proyecto
-        uses: actions/checkout@v4
-
-      - name: Preparar Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Instalar Motor Android (Flutter)
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.22.2'
-
-      - name: Instalar Flet Directamente
-        run: pip install -r requirements.txt
-
-      - name: Construir la App (AAB)
-        run: flet build aab --org com.erwingim --project bitacorafinanciera
-
-      - name: Entregar Archivo Final
+      - name: Generar Keystore
+        run: |
+          keytool -genkey -v -keystore bitacora-key.keystore -alias bitacora -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Erwin, OU=Desarrollo, O=Bitacora, L=Caracas, C=VE" -storepass "bitacora2026" -keypass "bitacora2026"
+      - name: Entregar Keystore
         uses: actions/upload-artifact@v4
         with:
-          name: Bitacora-AAB
-          path: build/aab/**/*.aab
+          name: MiFirmaDigital
+          path: bitacora-key.keystore
