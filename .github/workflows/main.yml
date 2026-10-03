@@ -1,4 +1,4 @@
-name: Compilar APK Android
+name: Compilar AAB Android
 
 on:
   workflow_dispatch:
@@ -23,11 +23,11 @@ jobs:
       - name: Instalar Flet Directamente
         run: pip install -r requirements.txt
 
-      - name: Construir la App (APK)
+      - name: Construir la App (AAB)
         run: flet build aab
 
       - name: Entregar Archivo Final
         uses: actions/upload-artifact@v4
         with:
-          name: BitacoraFinanciera
-          path: build/apk/**/*.aab
+          name: Bitacora-AAB
+          path: build/aab/**/*.aab
