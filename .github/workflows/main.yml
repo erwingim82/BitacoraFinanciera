@@ -20,18 +20,18 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet Última Versión Compatible con API 36
+      - name: Instalar Flet y Dependencias Limpias
         run: |
           pip install --upgrade flet certifi
 
-      - name: Configurar dependencias exactas para Android
+      - name: Configurar requerimientos móviles
         run: |
           echo "certifi" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.12" --build-number 13
-          yes | flet build aab --build-version "1.0.12" --build-number 13 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.14" --build-number 15
+          yes | flet build aab --build-version "1.0.14" --build-number 15 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
