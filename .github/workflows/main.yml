@@ -15,20 +15,15 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Instalar Motor Android (Flutter)
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.24.3'
-
-      - name: Instalar Flet Directamente y Actualizar
+      - name: Instalar Flet (Actualizado)
         run: |
           pip install -r requirements.txt
           pip install --upgrade flet
 
       - name: Construir la App (APK y AAB)
         run: |
-          flet build apk
-          flet build aab --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk
+          yes | flet build aab --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
