@@ -28,12 +28,21 @@ jobs:
           flet build apk
           flet build aab --org com.erwingim --project bitacorafinanciera
 
-      - name: Firmar el archivo AAB (Modo Producción)
+      - name: Firmar el archivo AAB con apksigner (Modo Producción)
         run: |
-          # Borra la firma de prueba por defecto
-          zip -d build/aab/**/*.aab META-INF/\* || true
-          # Aplica la nueva firma de lanzamiento
-          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore bitacora-key.keystore -storepass "bitacora2026" -keypass "bitacora2026" $(find build/aab -name "*.aab" | head -n 1) bitacora
+          # Encontrar la ruta del build-tools de Android instalado en el servidor
+          BUILD_TOOLS_DIR=$(find $ANDROID_SDK_ROOT/build-tools -maxdepth 1 -mindepth 1 | sort | tail -n 1)
+          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          
+          # Limpiar cualquier firma anterior por defecto
+          AAB_FILE=$(find build/aab -name "*.aab" | head -n 1)
+          zip -d "$AAB_FILE" META-INF/\* || true
+          
+          # Firmar correctamente con la herramienta oficial de Google
+          $APKSIGNER sign --ks bitacora-key.keystore --ks-pass pass:bitacora2026 --key-pass pass:bitacora2026 "$AAB_FILE"
+          
+          # Verificar que la firma sea válida
+          $APKSIGNER verify "$AAB_FILE"
 
       - name: Entregar Archivo AAB Firmado
         uses: actions/upload-artifact@v4
