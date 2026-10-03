@@ -143,7 +143,7 @@ def main(page: ft.Page):
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_calculadora))]
             )
 
-            # --- MÓDULO DE CONVERTIDOR DE TASAS MEJORADO ---
+            # --- MÓDULO DE CONVERTIDOR DE TASAS CORREGIDO ---
             tasas_guardadas = page.client_storage.get("tasas_guardadas") or {"bcv": "", "eur": "", "usdt": ""}
             
             txt_tasa_bcv_conv = ft.TextField(label="Tasa BCV", value=tasas_guardadas.get("bcv", ""), width=85, height=45, text_size=11, content_padding=5, keyboard_type=ft.KeyboardType.NUMBER)
@@ -173,6 +173,7 @@ def main(page: ft.Page):
                         lbl_res_eur.value = f"A tasa EUR: Bs {fmt(monto * t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: Bs {fmt(monto * t_usdt) if t_usdt > 0 else '0,00'}"
                     else:
+                        # Corrección aquí: Dividimos los bolívares entre la tasa correspondiente
                         lbl_res_bcv.value = f"A tasa BCV: $ {fmt(monto / t_bcv) if t_bcv > 0 else '0,00'}"
                         lbl_res_eur.value = f"A tasa EUR: € {fmt(monto / t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: ₮ {fmt(monto / t_usdt) if t_usdt > 0 else '0,00'}"
@@ -201,7 +202,7 @@ def main(page: ft.Page):
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_convertidor))]
             )
 
-            # --- MÓDULO DE EXPORTACIÓN CON FORMATO VENEZOLANO ---
+            # --- MÓDULO DE EXPORTACIÓN ---
             opcion_exportar = ft.Dropdown(label="Enviar reporte mediante:", options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")], value="WhatsApp", border_color=ft.colors.BLUE_400)
 
             def procesar_exportacion(e):
@@ -281,7 +282,7 @@ def main(page: ft.Page):
             drop_filtro_mes.on_change = drop_filtro_anio.on_change = actualizar_historial_filtrado
             dialogo_historico = ft.AlertDialog(title=ft.Text("Histórico", weight=ft.FontWeight.BOLD), content=ft.Container(width=320, height=500, content=ft.Column([ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10), ft.Divider(), lista_historial_detallado])), actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))])
 
-            # --- APP BAR ACTUALIZADA (LOGO BF COMPACTO) ---
+            # --- APP BAR ---
             page.appbar = ft.AppBar(
                 title=ft.Row([ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.WHITE), ft.Text("BF", weight=ft.FontWeight.BOLD, size=22)], tight=True, alignment=ft.MainAxisAlignment.CENTER),
                 center_title=True, bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT), elevation=5,
@@ -293,7 +294,7 @@ def main(page: ft.Page):
                 ]
             )
 
-            # --- MÓDULO DE PATRIMONIO CONSOLIDADO ---
+            # --- MÓDULO DE PATRIMONIO ---
             lbl_eq_bcv = ft.Text("Consolidado: Bs 0,00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
             lbl_eq_usd = ft.Text("Consolidado: $ 0,00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
 
@@ -326,7 +327,7 @@ def main(page: ft.Page):
                 ]
             )
 
-            # --- BALANCE DUAL (UI FORMATO VE) ---
+            # --- BALANCE DUAL ---
             lbl_saldo_usd = ft.Text("$ 0,00", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
             lbl_saldo_bs = ft.Text("Bs 0,00", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
             
