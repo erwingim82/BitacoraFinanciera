@@ -24,14 +24,15 @@ jobs:
         run: |
           pip install --upgrade flet
 
-      - name: Limpiar dependencias de escritorio
+      - name: Configurar dependencias exactas para Android
         run: |
-          echo "" > requirements.txt
+          # Solo incluimos certifi (necesario para internet en Android) y evitamos librerías de PC
+          echo "certifi" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          flet build apk --build-version "1.0.1" --build-number 2
-          flet build aab --build-version "1.0.1" --build-number 2 --org com.erwingim --project bitacorafinanciera
+          flet build apk --build-version "1.0.2" --build-number 3
+          flet build aab --build-version "1.0.2" --build-number 3 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
