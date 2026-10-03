@@ -20,20 +20,19 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet en el Servidor
+      - name: Instalar Flet (Versión 0.25.2 - Estable para Móviles)
         run: |
-          pip install --upgrade flet
+          pip install flet==0.25.2
 
       - name: Configurar dependencias exactas para Android
         run: |
-          # Instalamos Flet limpio (versión móvil) y Certifi para el internet
-          echo "flet" > requirements.txt
-          echo "certifi" >> requirements.txt
+          # En Flet 0.25 el motor se auto-empaqueta perfecto. Solo agregamos certifi.
+          echo "certifi" > requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.3" --build-number 4
-          yes | flet build aab --build-version "1.0.3" --build-number 4 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.4" --build-number 5
+          yes | flet build aab --build-version "1.0.4" --build-number 5 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
