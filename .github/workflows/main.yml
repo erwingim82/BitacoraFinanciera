@@ -24,10 +24,23 @@ jobs:
         run: |
           pip install flet==0.25.2 certifi
 
+      - name: Configurar dependencias exactas para Android
+        run: |
+          echo "certifi" > requirements.txt
+
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.9" --build-number 10
-          yes | flet build aab --build-version "1.0.9" --build-number 10 --org com.erwingim --project bitacorafinanciera
+          # Esto genera la estructura inicial de Flutter/Android temporalmente
+          flet build apk --build-version "1.0.10" --build-number 11
+          
+          # Forzar el nivel de API 36 directamente en el build.gradle generado por Flet
+          find build/flutter/android -name "build.gradle" -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
+          find build/flutter/android -name "build.gradle" -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
+          find build/flutter/android -name "build.gradle" -exec sed -i 's/compileSdk 34/compileSdk 36/g' {} + || true
+          find build/flutter/android -name "build.gradle" -exec sed -i 's/targetSdk 34/targetSdk 36/g' {} + || true
+
+          # Compilar definitivamente el AAB con la API 36 inyectada
+          yes | flet build aab --build-version "1.0.10" --build-number 11 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
