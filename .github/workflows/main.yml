@@ -18,7 +18,7 @@ jobs:
       - name: Instalar Motor Android (Flutter y Licencias)
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.8'
+          flutter-version: '3.24.3'
 
       - name: Instalar Flet en el Servidor
         run: |
@@ -26,13 +26,14 @@ jobs:
 
       - name: Configurar dependencias exactas para Android
         run: |
-          # Solo incluimos certifi (necesario para internet en Android) y evitamos librerías de PC
-          echo "certifi" > requirements.txt
+          # Instalamos Flet limpio (versión móvil) y Certifi para el internet
+          echo "flet" > requirements.txt
+          echo "certifi" >> requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          flet build apk --build-version "1.0.2" --build-number 3
-          flet build aab --build-version "1.0.2" --build-number 3 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.3" --build-number 4
+          yes | flet build aab --build-version "1.0.3" --build-number 4 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
