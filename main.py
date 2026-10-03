@@ -143,7 +143,7 @@ def main(page: ft.Page):
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_calculadora))]
             )
 
-            # --- MÓDULO DE CONVERTIDOR DE TASAS CORREGIDO ---
+            # --- MÓDULO DE CONVERTIDOR DE TASAS ---
             tasas_guardadas = page.client_storage.get("tasas_guardadas") or {"bcv": "", "eur": "", "usdt": ""}
             
             txt_tasa_bcv_conv = ft.TextField(label="Tasa BCV", value=tasas_guardadas.get("bcv", ""), width=85, height=45, text_size=11, content_padding=5, keyboard_type=ft.KeyboardType.NUMBER)
@@ -173,7 +173,6 @@ def main(page: ft.Page):
                         lbl_res_eur.value = f"A tasa EUR: Bs {fmt(monto * t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: Bs {fmt(monto * t_usdt) if t_usdt > 0 else '0,00'}"
                     else:
-                        # Corrección aquí: Dividimos los bolívares entre la tasa correspondiente
                         lbl_res_bcv.value = f"A tasa BCV: $ {fmt(monto / t_bcv) if t_bcv > 0 else '0,00'}"
                         lbl_res_eur.value = f"A tasa EUR: € {fmt(monto / t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: ₮ {fmt(monto / t_usdt) if t_usdt > 0 else '0,00'}"
@@ -282,15 +281,19 @@ def main(page: ft.Page):
             drop_filtro_mes.on_change = drop_filtro_anio.on_change = actualizar_historial_filtrado
             dialogo_historico = ft.AlertDialog(title=ft.Text("Histórico", weight=ft.FontWeight.BOLD), content=ft.Container(width=320, height=500, content=ft.Column([ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10), ft.Divider(), lista_historial_detallado])), actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))])
 
-            # --- APP BAR ---
+            # --- APP BAR CON LOGOTIPO PERSONALIZADO ---
             page.appbar = ft.AppBar(
-                title=ft.Row([ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.WHITE), ft.Text("BF", weight=ft.FontWeight.BOLD, size=22)], tight=True, alignment=ft.MainAxisAlignment.CENTER),
+                title=ft.Row([
+                    ft.Image(src="logo_bf.png", width=32, height=32, fit=ft.ImageFit.CONTAIN),
+                    ft.Text("BF", weight=ft.FontWeight.BOLD, size=20)
+                ], tight=True, alignment=ft.MainAxisAlignment.CENTER, spacing=8),
                 center_title=True, bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT), elevation=5,
                 actions=[
                     ft.IconButton(icon=ft.icons.PRICE_CHANGE, tooltip="Convertidor", on_click=lambda e: [ejecutar_conversion(), page.open(dialogo_convertidor)]),
                     ft.IconButton(icon=ft.icons.CURRENCY_EXCHANGE, tooltip="Ver Al Cambio", on_click=lambda e: page.launch_url("https://alcambio.app/")),
                     ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
-                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar", on_click=lambda e: page.open(dialogo_exportar))
+                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar", on_click=lambda e: page.open(dialogo_exportar)),
+                    ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca))
                 ]
             )
 
