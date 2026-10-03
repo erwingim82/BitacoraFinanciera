@@ -88,7 +88,7 @@ def main(page: ft.Page):
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
                     ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Versión 1.1 (Bimonetaria)\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales.", size=14, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Versión 1.2 (Multi-Tasa)\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales.", size=14, text_align=ft.TextAlign.CENTER),
                     ft.Divider(color=ft.colors.TRANSPARENT, height=10),
                     ft.TextButton(
                         content=ft.Row([ft.Icon(ft.icons.EMAIL, color=ft.colors.BLUE_400), ft.Text("Sugerencias y Soporte", color=ft.colors.BLUE_400)], alignment=ft.MainAxisAlignment.CENTER, tight=True),
@@ -99,7 +99,7 @@ def main(page: ft.Page):
                 actions_alignment=ft.MainAxisAlignment.CENTER
             )
 
-            # --- MÓDULO DE CALCULADORA ---
+            # --- MÓDULO DE CALCULADORA ESTÁNDAR ---
             txt_pantalla_calc = ft.TextField(value="0", text_align=ft.TextAlign.RIGHT, read_only=True, border_color=ft.colors.BLUE_400, text_size=20)
 
             def click_calculadora(e):
@@ -107,15 +107,11 @@ def main(page: ft.Page):
                 if tecla == "C":
                     txt_pantalla_calc.value = "0"
                 elif tecla == "=":
-                    try:
-                        txt_pantalla_calc.value = str(eval(txt_pantalla_calc.value))
-                    except:
-                        txt_pantalla_calc.value = "Error"
+                    try: txt_pantalla_calc.value = str(eval(txt_pantalla_calc.value))
+                    except: txt_pantalla_calc.value = "Error"
                 else:
-                    if txt_pantalla_calc.value in ["0", "Error"]:
-                        txt_pantalla_calc.value = tecla
-                    else:
-                        txt_pantalla_calc.value += tecla
+                    if txt_pantalla_calc.value in ["0", "Error"]: txt_pantalla_calc.value = tecla
+                    else: txt_pantalla_calc.value += tecla
                 page.update()
 
             def crear_boton_calc(texto, color_fondo=ft.colors.SURFACE_VARIANT):
@@ -134,6 +130,86 @@ def main(page: ft.Page):
                     ], tight=True)
                 ),
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_calculadora))]
+            )
+
+            # --- MÓDULO DE CONVERTIDOR DE TASAS (NUEVO) ---
+            tasas_guardadas = page.client_storage.get("tasas_guardadas") or {"bcv": "", "eur": "", "usdt": ""}
+            
+            txt_tasa_bcv_conv = ft.TextField(label="BCV (Bs/$)", value=tasas_guardadas.get("bcv", ""), width=85, height=45, text_size=11, content_padding=5, keyboard_type=ft.KeyboardType.NUMBER)
+            txt_tasa_eur_conv = ft.TextField(label="EUR (Bs/€)", value=tasas_guardadas.get("eur", ""), width=85, height=45, text_size=11, content_padding=5, keyboard_type=ft.KeyboardType.NUMBER)
+            txt_tasa_usdt_conv = ft.TextField(label="USDT (Bs/₮)", value=tasas_guardadas.get("usdt", ""), width=85, height=45, text_size=11, content_padding=5, keyboard_type=ft.KeyboardType.NUMBER)
+
+            txt_monto_conv = ft.TextField(label="Monto a calcular", value="0", width=140, height=45, text_size=13, keyboard_type=ft.KeyboardType.NUMBER)
+            drop_origen_conv = ft.Dropdown(options=[ft.dropdown.Option("Bs"), ft.dropdown.Option("$"), ft.dropdown.Option("€"), ft.dropdown.Option("₮")], value="Bs", width=70, height=45, content_padding=5)
+            
+            lbl_res_bs = ft.Text("Bs: 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.WHITE, size=14)
+            lbl_res_usd = ft.Text("$: 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_300, size=14)
+            lbl_res_eur = ft.Text("€: 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_300, size=14)
+            lbl_res_usdt = ft.Text("₮: 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_300, size=14)
+
+            def ejecutar_conversion(e=None):
+                # 1. Guardar tasas para usarlas en el Patrimonio de la principal
+                page.client_storage.set("tasas_guardadas", {
+                    "bcv": txt_tasa_bcv_conv.value,
+                    "eur": txt_tasa_eur_conv.value,
+                    "usdt": txt_tasa_usdt_conv.value
+                })
+                # Sincronizar con el TextField de la pantalla principal
+                txt_tasa_bcv.value = txt_tasa_bcv_conv.value
+                calcular_equivalentes() 
+
+                try:
+                    monto = float(txt_monto_conv.value.replace(",", ".")) if txt_monto_conv.value else 0.0
+                    t_bcv = float(txt_tasa_bcv_conv.value.replace(",", ".")) if txt_tasa_bcv_conv.value else 0.0
+                    t_eur = float(txt_tasa_eur_conv.value.replace(",", ".")) if txt_tasa_eur_conv.value else 0.0
+                    t_usdt = float(txt_tasa_usdt_conv.value.replace(",", ".")) if txt_tasa_usdt_conv.value else 0.0
+
+                    # Convertimos el monto origen a Bolívares primero (como base)
+                    monto_en_bs = 0.0
+                    origen = drop_origen_conv.value
+                    
+                    if origen == "Bs": monto_en_bs = monto
+                    elif origen == "$" and t_bcv > 0: monto_en_bs = monto * t_bcv
+                    elif origen == "€" and t_eur > 0: monto_en_bs = monto * t_eur
+                    elif origen == "₮" and t_usdt > 0: monto_en_bs = monto * t_usdt
+
+                    # A partir de la base en Bs, calculamos el resto
+                    val_bs = monto_en_bs
+                    val_usd = (monto_en_bs / t_bcv) if t_bcv > 0 else 0.0
+                    val_eur = (monto_en_bs / t_eur) if t_eur > 0 else 0.0
+                    val_usdt = (monto_en_bs / t_usdt) if t_usdt > 0 else 0.0
+
+                    lbl_res_bs.value = f"Bs: {val_bs:,.2f}"
+                    lbl_res_usd.value = f"$: {val_usd:,.2f}"
+                    lbl_res_eur.value = f"€: {val_eur:,.2f}"
+                    lbl_res_usdt.value = f"₮: {val_usdt:,.2f}"
+                except ValueError:
+                    pass
+                page.update()
+
+            txt_monto_conv.on_change = ejecutar_conversion
+            drop_origen_conv.on_change = ejecutar_conversion
+            txt_tasa_bcv_conv.on_change = ejecutar_conversion
+            txt_tasa_eur_conv.on_change = ejecutar_conversion
+            txt_tasa_usdt_conv.on_change = ejecutar_conversion
+
+            dialogo_convertidor = ft.AlertDialog(
+                title=ft.Text("Convertidor de Tasas", weight=ft.FontWeight.BOLD, size=18),
+                content=ft.Container(
+                    width=300,
+                    content=ft.Column([
+                        ft.Text("1. Ingresa las tasas del día:", size=12, color=ft.colors.WHITE70),
+                        ft.Row([txt_tasa_bcv_conv, txt_tasa_eur_conv, txt_tasa_usdt_conv], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                        ft.Divider(),
+                        ft.Text("2. Calcula equivalencias:", size=12, color=ft.colors.WHITE70),
+                        ft.Row([txt_monto_conv, drop_origen_conv], alignment=ft.MainAxisAlignment.CENTER),
+                        ft.Container(
+                            padding=15, bgcolor=ft.colors.with_opacity(0.3, ft.colors.SURFACE_VARIANT), border_radius=10,
+                            content=ft.Column([lbl_res_bs, lbl_res_usd, lbl_res_eur, lbl_res_usdt], spacing=5)
+                        )
+                    ], tight=True)
+                ),
+                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_convertidor))]
             )
 
             # --- MÓDULO DE EXPORTACIÓN ---
@@ -218,24 +294,30 @@ def main(page: ft.Page):
             drop_filtro_anio.on_change = actualizar_historial_filtrado
             dialogo_historico = ft.AlertDialog(title=ft.Text("Histórico", weight=ft.FontWeight.BOLD), content=ft.Container(width=320, height=500, content=ft.Column([ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10), ft.Divider(), lista_historial_detallado])), actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))])
 
-            # --- APP BAR ---
+            # --- APP BAR ACTUALIZADA ---
             page.appbar = ft.AppBar(
                 title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD), center_title=True, bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT), elevation=5,
                 actions=[
-                    ft.IconButton(icon=ft.icons.CURRENCY_EXCHANGE, tooltip="Tasa de Cambio", on_click=lambda e: page.launch_url("https://alcambio.app/")),
-                    ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca)),
+                    # Nuevo botón de Convertidor
+                    ft.IconButton(icon=ft.icons.PRICE_CHANGE, tooltip="Convertidor de Tasas", on_click=lambda e: [ejecutar_conversion(), page.open(dialogo_convertidor)]),
+                    ft.IconButton(icon=ft.icons.CURRENCY_EXCHANGE, tooltip="Ver Al Cambio", on_click=lambda e: page.launch_url("https://alcambio.app/")),
                     ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
-                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar", on_click=lambda e: page.open(dialogo_exportar))
+                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar", on_click=lambda e: page.open(dialogo_exportar)),
+                    ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca))
                 ]
             )
 
-            # --- MÓDULO DE CONVERSIÓN CONSOLIDADA ---
-            tasas_guardadas = page.client_storage.get("tasas_guardadas") or {"bcv": "", "eur": "", "usdt": ""}
+            # --- MÓDULO DE CONVERSIÓN CONSOLIDADA (PATRIMONIO) ---
             lbl_eq_bcv = ft.Text("Consolidado: Bs. 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
             lbl_eq_usd = ft.Text("Consolidado: $ 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
 
             def calcular_equivalentes(e=None):
-                page.client_storage.set("tasas_guardadas", {"bcv": txt_tasa_bcv.value, "eur": "", "usdt": ""})
+                # Guarda la tasa para que el convertidor también la vea
+                page.client_storage.set("tasas_guardadas", {
+                    "bcv": txt_tasa_bcv.value, 
+                    "eur": txt_tasa_eur_conv.value, 
+                    "usdt": txt_tasa_usdt_conv.value
+                })
                 try:
                     t_bcv = float(txt_tasa_bcv.value.replace(",", ".")) if txt_tasa_bcv.value else 0.0
                     if t_bcv > 0:
@@ -248,7 +330,7 @@ def main(page: ft.Page):
                 except ValueError: pass
                 page.update()
 
-            txt_tasa_bcv = ft.TextField(label="Tasa BCV", value=tasas_guardadas["bcv"], width=120, height=45, content_padding=5, text_size=13, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
+            txt_tasa_bcv = ft.TextField(label="Tasa BCV", value=tasas_guardadas.get("bcv", ""), width=120, height=45, content_padding=5, text_size=13, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
 
             panel_conversiones = ft.ExpansionTile(
                 title=ft.Text("Calcular Patrimonio Total", size=13, color=ft.colors.WHITE70), collapsed_text_color=ft.colors.WHITE70, text_color=ft.colors.WHITE, icon_color=ft.colors.WHITE70,
@@ -296,7 +378,7 @@ def main(page: ft.Page):
                     ing_usd, egr_usd, ing_bs, egr_bs = 0.0, 0.0, 0.0, 0.0
 
                     for mov in reversed(movimientos):
-                        moneda = mov.get("moneda", "$") # Compatibilidad con registros viejos
+                        moneda = mov.get("moneda", "$") 
                         
                         if mov["tipo"] == "Ingreso":
                             if moneda == "$": ing_usd += mov["monto"]
