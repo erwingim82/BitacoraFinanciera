@@ -1,4 +1,4 @@
-name: Generar Firma Digital
+name: Compilar APK y AAB Android
 
 on:
   workflow_dispatch:
@@ -7,11 +7,42 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Generar Keystore
+      - name: Obtener archivos del proyecto
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Instalar Motor Android (Flutter)
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.22.2'
+
+      - name: Instalar Flet Directamente
+        run: pip install -r requirements.txt
+
+      - name: Construir la App (APK y AAB)
         run: |
-          keytool -genkey -v -keystore bitacora-key.keystore -alias bitacora -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Erwin, OU=Desarrollo, O=Bitacora, L=Caracas, C=VE" -storepass "bitacora2026" -keypass "bitacora2026"
-      - name: Entregar Keystore
+          flet build apk
+          flet build aab --org com.erwingim --project bitacorafinanciera
+
+      - name: Firmar el archivo AAB (Modo Producción)
+        run: |
+          # Borra la firma de prueba por defecto
+          zip -d build/aab/**/*.aab META-INF/\* || true
+          # Aplica la nueva firma de lanzamiento
+          jarsigner -verbose -sigalg SHA256withRSA -digestalg SHA-256 -keystore bitacora-key.keystore -storepass "bitacora2026" -keypass "bitacora2026" $(find build/aab -name "*.aab" | head -n 1) bitacora
+
+      - name: Entregar Archivo AAB Firmado
         uses: actions/upload-artifact@v4
         with:
-          name: MiFirmaDigital
-          path: bitacora-key.keystore
+          name: Bitacora-AAB-Oficial
+          path: build/aab/**/*.aab
+
+      - name: Entregar Archivo APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bitacora-APK
+          path: build/apk/**/*.apk
