@@ -71,13 +71,13 @@ def main(page: ft.Page):
             )
 
         # ==========================================
-        # 2. INTERFAZ PRINCIPAL, HISTÓRICO Y CONVERSIONES
+        # 2. INTERFAZ PRINCIPAL Y MÓDULOS
         # ==========================================
         def construir_interfaz_principal():
             page.clean()
             
-            # Variable global para esta interfaz para usar en las conversiones
-            saldo_actual = 0.0 
+            saldo_usd_actual = 0.0 
+            saldo_bs_actual = 0.0
             
             datos_usuario = page.client_storage.get("usuario")
             if not datos_usuario:
@@ -88,13 +88,10 @@ def main(page: ft.Page):
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
                     ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Versión 1.0\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales de forma rápida y segura.", size=14, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Versión 1.1 (Bimonetaria)\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales.", size=14, text_align=ft.TextAlign.CENTER),
                     ft.Divider(color=ft.colors.TRANSPARENT, height=10),
                     ft.TextButton(
-                        content=ft.Row([
-                            ft.Icon(ft.icons.EMAIL, color=ft.colors.BLUE_400),
-                            ft.Text("Sugerencias y Soporte", color=ft.colors.BLUE_400)
-                        ], alignment=ft.MainAxisAlignment.CENTER, tight=True),
+                        content=ft.Row([ft.Icon(ft.icons.EMAIL, color=ft.colors.BLUE_400), ft.Text("Sugerencias y Soporte", color=ft.colors.BLUE_400)], alignment=ft.MainAxisAlignment.CENTER, tight=True),
                         on_click=lambda e: page.launch_url("mailto:myconsultingsca@gmail.com?subject=Sugerencias App Bitácora")
                     )
                 ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
@@ -111,22 +108,18 @@ def main(page: ft.Page):
                     txt_pantalla_calc.value = "0"
                 elif tecla == "=":
                     try:
-                        resultado = str(eval(txt_pantalla_calc.value))
-                        txt_pantalla_calc.value = resultado
-                    except Exception:
+                        txt_pantalla_calc.value = str(eval(txt_pantalla_calc.value))
+                    except:
                         txt_pantalla_calc.value = "Error"
                 else:
-                    if txt_pantalla_calc.value == "0" or txt_pantalla_calc.value == "Error":
+                    if txt_pantalla_calc.value in ["0", "Error"]:
                         txt_pantalla_calc.value = tecla
                     else:
                         txt_pantalla_calc.value += tecla
                 page.update()
 
             def crear_boton_calc(texto, color_fondo=ft.colors.SURFACE_VARIANT):
-                return ft.ElevatedButton(
-                    text=texto, data=texto, on_click=click_calculadora, 
-                    style=ft.ButtonStyle(bgcolor=color_fondo, color=ft.colors.WHITE), expand=True
-                )
+                return ft.ElevatedButton(text=texto, data=texto, on_click=click_calculadora, style=ft.ButtonStyle(bgcolor=color_fondo, color=ft.colors.WHITE), expand=True)
 
             dialogo_calculadora = ft.AlertDialog(
                 title=ft.Text("Calculadora", weight=ft.FontWeight.BOLD),
@@ -144,209 +137,151 @@ def main(page: ft.Page):
             )
 
             # --- MÓDULO DE EXPORTACIÓN ---
-            opcion_exportar = ft.Dropdown(
-                label="Enviar reporte mediante:", 
-                options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")],
-                value="WhatsApp", border_color=ft.colors.BLUE_400
-            )
+            opcion_exportar = ft.Dropdown(label="Enviar reporte mediante:", options=[ft.dropdown.Option("WhatsApp"), ft.dropdown.Option("Correo Electrónico")], value="WhatsApp", border_color=ft.colors.BLUE_400)
 
             def procesar_exportacion(e):
                 try:
                     historial = page.client_storage.get("movimientos") or []
+                    if not historial: return notificar("No hay movimientos registrados para exportar.", ft.colors.ORANGE_700)
 
-                    if not historial:
-                        return notificar("No hay movimientos registrados para exportar.", ft.colors.ORANGE_700)
+                    ing_usd = sum([m["monto"] for m in historial if m["tipo"] == "Ingreso" and m.get("moneda", "$") == "$"])
+                    egr_usd = sum([m["monto"] for m in historial if m["tipo"] == "Egreso" and m.get("moneda", "$") == "$"])
+                    ing_bs = sum([m["monto"] for m in historial if m["tipo"] == "Ingreso" and m.get("moneda", "$") == "Bs"])
+                    egr_bs = sum([m["monto"] for m in historial if m["tipo"] == "Egreso" and m.get("moneda", "$") == "Bs"])
+                    
+                    s_usd = ing_usd - egr_usd
+                    s_bs = ing_bs - egr_bs
 
-                    total_ingresos = sum([m["monto"] for m in historial if m["tipo"] == "Ingreso"])
-                    total_egresos = sum([m["monto"] for m in historial if m["tipo"] == "Egreso"])
-                    saldo = total_ingresos - total_egresos
-
-                    reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n"
-                    reporte += f"👤 *Usuario:* {datos_usuario['nombre']} {datos_usuario['apellido']}\n"
-                    reporte += f"💰 *Saldo Actual:* ${saldo:.2f}\n"
-                    reporte += f"📈 *Total Ingresos:* ${total_ingresos:.2f}\n"
-                    reporte += f"📉 *Total Egresos:* ${total_egresos:.2f}\n\n"
+                    reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n👤 *Usuario:* {datos_usuario['nombre']} {datos_usuario['apellido']}\n\n"
+                    reporte += f"💵 *SALDO EN DÓLARES:* ${s_usd:.2f}\n(+ Ingresos: ${ing_usd:.2f} | - Egresos: ${egr_usd:.2f})\n\n"
+                    reporte += f"🇻🇪 *SALDO EN BOLÍVARES:* Bs {s_bs:.2f}\n(+ Ingresos: Bs {ing_bs:.2f} | - Egresos: Bs {egr_bs:.2f})\n\n"
                     reporte += "*DETALLE DE MOVIMIENTOS:*\n"
                     
                     for mov in historial:
                         icono = "🟢" if mov["tipo"] == "Ingreso" else "🔴"
-                        reporte += f"{icono} {mov['fecha']} | {mov['concepto']}: ${mov['monto']:.2f}\n"
+                        moneda = mov.get("moneda", "$")
+                        reporte += f"{icono} {mov['fecha']} | {mov['concepto']}: {moneda} {mov['monto']:.2f}\n"
 
                     reporte_codificado = urllib.parse.quote(reporte)
                     page.close(dialogo_exportar)
                     
                     if opcion_exportar.value == "WhatsApp":
-                        tel_limpio = datos_usuario['telefono'].replace('+', '').replace(' ', '')
-                        page.launch_url(f"https://wa.me/{tel_limpio}?text={reporte_codificado}")
+                        page.launch_url(f"https://wa.me/{datos_usuario['telefono'].replace('+', '').replace(' ', '')}?text={reporte_codificado}")
                     else:
                         page.launch_url(f"mailto:{datos_usuario['correo']}?subject=Reporte de Movimientos&body={reporte_codificado}")
-                        
                 except Exception as ex:
                     notificar(f"Error al generar reporte: {ex}", ft.colors.RED_700)
 
-            dialogo_exportar = ft.AlertDialog(
-                title=ft.Text("Exportar Movimientos"), 
-                content=ft.Column([
-                    ft.Text("Genera un reporte detallado de tus finanzas."),
-                    opcion_exportar
-                ], tight=True), 
-                actions=[
-                    ft.FilledButton("Compartir", on_click=procesar_exportacion, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500)), 
-                    ft.TextButton("Cancelar", on_click=lambda e: page.close(dialogo_exportar))
-                ]
-            )
+            dialogo_exportar = ft.AlertDialog(title=ft.Text("Exportar Movimientos"), content=ft.Column([ft.Text("Genera un reporte detallado de tus finanzas."), opcion_exportar], tight=True), actions=[ft.FilledButton("Compartir", on_click=procesar_exportacion, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500)), ft.TextButton("Cancelar", on_click=lambda e: page.close(dialogo_exportar))])
 
             # --- MÓDULO EXPLORADOR DE HISTÓRICO FILTRADO ---
             meses_dict = {"Todos": "Todos", "Enero": "01", "Febrero": "02", "Marzo": "03", "Abril": "04", "Mayo": "05", "Junio": "06", "Julio": "07", "Agosto": "08", "Septiembre": "09", "Octubre": "10", "Noviembre": "11", "Diciembre": "12"}
-            
-            drop_filtro_mes = ft.Dropdown(label="Filtrar por Mes", options=[ft.dropdown.Option(mes) for mes in meses_dict.keys()], value="Todos", width=140, border_color=ft.colors.BLUE_400)
+            drop_filtro_mes = ft.Dropdown(label="Mes", options=[ft.dropdown.Option(mes) for mes in meses_dict.keys()], value="Todos", width=140, border_color=ft.colors.BLUE_400)
             drop_filtro_anio = ft.Dropdown(label="Año", options=[ft.dropdown.Option("Todos")] + [ft.dropdown.Option(str(y)) for y in range(2024, 2031)], value="Todos", width=100, border_color=ft.colors.BLUE_400)
-
             lista_historial_detallado = ft.ListView(expand=True, spacing=5)
             lbl_resumen_filtro = ft.Text("...", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER)
 
             def actualizar_historial_filtrado(e=None):
                 lista_historial_detallado.controls.clear()
                 movimientos = page.client_storage.get("movimientos") or []
-                ing = 0.0
-                egr = 0.0
+                ing_usd, egr_usd, ing_bs, egr_bs = 0.0, 0.0, 0.0, 0.0
 
                 for mov in reversed(movimientos):
-                    try:
-                        dia, mes, anio = mov["fecha"].split("/")
-                    except:
-                        continue
+                    try: dia, mes, anio = mov["fecha"].split("/")
+                    except: continue
                     
                     filtro_mes = meses_dict[drop_filtro_mes.value]
-                    if filtro_mes != "Todos" and mes != filtro_mes:
-                        continue
-                    if drop_filtro_anio.value != "Todos" and anio != drop_filtro_anio.value:
+                    if (filtro_mes != "Todos" and mes != filtro_mes) or (drop_filtro_anio.value != "Todos" and anio != drop_filtro_anio.value):
                         continue
                     
+                    moneda = mov.get("moneda", "$")
                     if mov["tipo"] == "Ingreso":
-                        ing += mov["monto"]
-                        color = ft.colors.GREEN_400
-                        icono = ft.icons.ARROW_UPWARD
+                        if moneda == "$": ing_usd += mov["monto"]
+                        else: ing_bs += mov["monto"]
+                        color, icono = ft.colors.GREEN_400, ft.icons.ARROW_UPWARD
                     else:
-                        egr += mov["monto"]
-                        color = ft.colors.RED_400
-                        icono = ft.icons.ARROW_DOWNWARD
+                        if moneda == "$": egr_usd += mov["monto"]
+                        else: egr_bs += mov["monto"]
+                        color, icono = ft.colors.RED_400, ft.icons.ARROW_DOWNWARD
                     
                     lista_historial_detallado.controls.append(
-                        ft.ListTile(
-                            leading=ft.Icon(icono, color=color, size=24),
-                            title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD, size=14),
-                            subtitle=ft.Text(mov["fecha"], size=12),
-                            trailing=ft.Text(f"${mov['monto']:.2f}", color=color, weight=ft.FontWeight.BOLD),
-                            bgcolor=ft.colors.with_opacity(0.3, ft.colors.SURFACE_VARIANT), dense=True
-                        )
+                        ft.ListTile(leading=ft.Icon(icono, color=color, size=24), title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD, size=14), subtitle=ft.Text(mov["fecha"], size=12), trailing=ft.Text(f"{moneda} {mov['monto']:,.2f}", color=color, weight=ft.FontWeight.BOLD), bgcolor=ft.colors.with_opacity(0.3, ft.colors.SURFACE_VARIANT), dense=True)
                     )
 
-                saldo_periodo = ing - egr
-                color_saldo = ft.colors.BLUE_200 if saldo_periodo >= 0 else ft.colors.RED_200
-                lbl_resumen_filtro.value = f"Ingresos: ${ing:.2f}  |  Egresos: ${egr:.2f}\nSaldo del Período: ${saldo_periodo:.2f}"
-                lbl_resumen_filtro.color = color_saldo
+                s_usd = ing_usd - egr_usd
+                s_bs = ing_bs - egr_bs
+                lbl_resumen_filtro.value = f"Saldo $: {s_usd:,.2f}  |  Saldo Bs: {s_bs:,.2f}"
+                lbl_resumen_filtro.color = ft.colors.BLUE_200 if (s_usd >= 0 and s_bs >= 0) else ft.colors.ORANGE_300
                 page.update()
 
             drop_filtro_mes.on_change = actualizar_historial_filtrado
             drop_filtro_anio.on_change = actualizar_historial_filtrado
-
-            dialogo_historico = ft.AlertDialog(
-                title=ft.Text("Histórico Detallado", weight=ft.FontWeight.BOLD),
-                content=ft.Container(
-                    width=320, height=500,
-                    content=ft.Column([
-                        ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10),
-                        ft.Divider(),
-                        lista_historial_detallado
-                    ])
-                ),
-                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))]
-            )
+            dialogo_historico = ft.AlertDialog(title=ft.Text("Histórico", weight=ft.FontWeight.BOLD), content=ft.Container(width=320, height=500, content=ft.Column([ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.with_opacity(0.5, ft.colors.SURFACE_VARIANT), border_radius=10), ft.Divider(), lista_historial_detallado])), actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))])
 
             # --- APP BAR ---
             page.appbar = ft.AppBar(
-                title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD),
-                center_title=True,
-                bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT),
-                elevation=5,
+                title=ft.Text(f"Bitácora de {datos_usuario['nombre']}", weight=ft.FontWeight.BOLD), center_title=True, bgcolor=ft.colors.with_opacity(0.8, ft.colors.SURFACE_VARIANT), elevation=5,
                 actions=[
                     ft.IconButton(icon=ft.icons.CURRENCY_EXCHANGE, tooltip="Tasa de Cambio", on_click=lambda e: page.launch_url("https://alcambio.app/")),
                     ft.IconButton(icon=ft.icons.HELP_OUTLINE, tooltip="Acerca de", on_click=lambda e: page.open(dialogo_acerca)),
                     ft.IconButton(icon=ft.icons.CALCULATE, tooltip="Calculadora", on_click=lambda e: page.open(dialogo_calculadora)),
-                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar Reporte", on_click=lambda e: page.open(dialogo_exportar))
+                    ft.IconButton(icon=ft.icons.SHARE, tooltip="Exportar", on_click=lambda e: page.open(dialogo_exportar))
                 ]
             )
 
-            # --- MÓDULO DE CONVERSIÓN DE DIVISAS (NUEVO) ---
-            # Cargar tasas guardadas o ponerlas en blanco
+            # --- MÓDULO DE CONVERSIÓN CONSOLIDADA ---
             tasas_guardadas = page.client_storage.get("tasas_guardadas") or {"bcv": "", "eur": "", "usdt": ""}
-            
-            lbl_eq_bcv = ft.Text("Bs. 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=16)
-            lbl_eq_eur = ft.Text("€ 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_200, size=16)
-            lbl_eq_usdt = ft.Text("₮ 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_200, size=16)
+            lbl_eq_bcv = ft.Text("Consolidado: Bs. 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
+            lbl_eq_usd = ft.Text("Consolidado: $ 0.00", weight=ft.FontWeight.BOLD, color=ft.colors.GREEN_200, size=13)
 
             def calcular_equivalentes(e=None):
-                # Guarda automáticamente las tasas ingresadas
-                page.client_storage.set("tasas_guardadas", {
-                    "bcv": txt_tasa_bcv.value,
-                    "eur": txt_tasa_eur.value,
-                    "usdt": txt_tasa_usdt.value
-                })
-                
+                page.client_storage.set("tasas_guardadas", {"bcv": txt_tasa_bcv.value, "eur": "", "usdt": ""})
                 try:
                     t_bcv = float(txt_tasa_bcv.value.replace(",", ".")) if txt_tasa_bcv.value else 0.0
-                    t_eur = float(txt_tasa_eur.value.replace(",", ".")) if txt_tasa_eur.value else 0.0
-                    t_usdt = float(txt_tasa_usdt.value.replace(",", ".")) if txt_tasa_usdt.value else 0.0
-                    
-                    lbl_eq_bcv.value = f"Bs. {(saldo_actual * t_bcv):,.2f}" if t_bcv > 0 else "Bs. 0.00"
-                    lbl_eq_eur.value = f"€ {(saldo_actual * t_eur):,.2f}" if t_eur > 0 else "€ 0.00"
-                    lbl_eq_usdt.value = f"₮ {(saldo_actual * t_usdt):,.2f}" if t_usdt > 0 else "₮ 0.00"
-                except ValueError:
-                    pass # Evita error si escriben letras por accidente
+                    if t_bcv > 0:
+                        total_bs_consolidado = saldo_bs_actual + (saldo_usd_actual * t_bcv)
+                        total_usd_consolidado = saldo_usd_actual + (saldo_bs_actual / t_bcv)
+                        lbl_eq_bcv.value = f"Total en Bs: {total_bs_consolidado:,.2f}"
+                        lbl_eq_usd.value = f"Total en $: {total_usd_consolidado:,.2f}"
+                    else:
+                        lbl_eq_bcv.value = lbl_eq_usd.value = "Ingresa la tasa"
+                except ValueError: pass
                 page.update()
 
-            txt_tasa_bcv = ft.TextField(label="BCV", value=tasas_guardadas["bcv"], width=100, height=45, content_padding=5, text_size=12, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
-            txt_tasa_eur = ft.TextField(label="Euro", value=tasas_guardadas["eur"], width=100, height=45, content_padding=5, text_size=12, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
-            txt_tasa_usdt = ft.TextField(label="USDT", value=tasas_guardadas["usdt"], width=100, height=45, content_padding=5, text_size=12, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
+            txt_tasa_bcv = ft.TextField(label="Tasa BCV", value=tasas_guardadas["bcv"], width=120, height=45, content_padding=5, text_size=13, keyboard_type=ft.KeyboardType.NUMBER, on_change=calcular_equivalentes)
 
             panel_conversiones = ft.ExpansionTile(
-                title=ft.Text("Ver saldo en otras monedas", size=13, color=ft.colors.WHITE70),
-                collapsed_text_color=ft.colors.WHITE70,
-                text_color=ft.colors.WHITE,
-                icon_color=ft.colors.WHITE70,
+                title=ft.Text("Calcular Patrimonio Total", size=13, color=ft.colors.WHITE70), collapsed_text_color=ft.colors.WHITE70, text_color=ft.colors.WHITE, icon_color=ft.colors.WHITE70,
                 controls=[
                     ft.Container(
                         padding=ft.padding.only(left=10, right=10, bottom=10),
                         content=ft.Column([
-                            ft.Row([txt_tasa_bcv, lbl_eq_bcv], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                            ft.Row([txt_tasa_eur, lbl_eq_eur], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                            ft.Row([txt_tasa_usdt, lbl_eq_usdt], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                            ft.Text("Esta herramienta unifica tus saldos en dólares y bolívares usando la tasa del día.", size=11, color=ft.colors.WHITE54),
+                            ft.Row([txt_tasa_bcv, ft.Column([lbl_eq_bcv, lbl_eq_usd], spacing=2)], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
                         ])
                     )
                 ]
             )
 
-            # --- BALANCE Y MOVIMIENTOS ---
-            lbl_saldo = ft.Text("$0.00", size=30, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
-            lbl_ingresos = ft.Text("$0.00", size=16, weight=ft.FontWeight.W_500, color=ft.colors.GREEN_400)
-            lbl_egresos = ft.Text("$0.00", size=16, weight=ft.FontWeight.W_500, color=ft.colors.RED_400)
+            # --- BALANCE DUAL (UI) ---
+            lbl_saldo_usd = ft.Text("$ 0.00", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
+            lbl_saldo_bs = ft.Text("Bs 0.00", size=22, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE)
+            
+            lbl_detalles_usd = ft.Text("Ing: $0.00 | Egr: $0.00", size=11, color=ft.colors.WHITE54)
+            lbl_detalles_bs = ft.Text("Ing: Bs0.00 | Egr: Bs0.00", size=11, color=ft.colors.WHITE54)
 
             tarjeta_balance = ft.Card(
-                elevation=8,
-                color=ft.colors.with_opacity(0.85, ft.colors.BLUE_GREY_900),
+                elevation=8, color=ft.colors.with_opacity(0.85, ft.colors.BLUE_GREY_900),
                 content=ft.Container(
                     padding=ft.padding.only(top=15, left=15, right=15),
                     content=ft.Column([
-                        ft.Text("SALDO ACTUAL", size=14, color=ft.colors.WHITE70),
-                        lbl_saldo,
-                        ft.Divider(color=ft.colors.WHITE24),
                         ft.Row([
-                            ft.Column([ft.Text("Ingresos", size=12, color=ft.colors.WHITE54), lbl_ingresos]),
-                            ft.Column([ft.Text("Egresos", size=12, color=ft.colors.WHITE54), lbl_egresos]),
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                        panel_conversiones # Integrado dentro de la tarjeta
+                            ft.Column([ft.Text("SALDO $", size=12, color=ft.colors.WHITE70, weight=ft.FontWeight.BOLD), lbl_saldo_usd, lbl_detalles_usd], expand=1),
+                            ft.Container(width=1, height=60, bgcolor=ft.colors.WHITE24),
+                            ft.Column([ft.Text("SALDO Bs", size=12, color=ft.colors.WHITE70, weight=ft.FontWeight.BOLD), lbl_saldo_bs, lbl_detalles_bs], expand=1, alignment=ft.MainAxisAlignment.END),
+                        ]),
+                        ft.Divider(color=ft.colors.WHITE24),
+                        panel_conversiones
                     ])
                 )
             )
@@ -354,57 +289,46 @@ def main(page: ft.Page):
             lista_movimientos = ft.ListView(expand=True, spacing=10, padding=10)
 
             def cargar_datos():
-                nonlocal saldo_actual
+                nonlocal saldo_usd_actual, saldo_bs_actual
                 lista_movimientos.controls.clear()
                 try:
                     movimientos = page.client_storage.get("movimientos") or []
-                    
-                    total_ingresos = 0.0
-                    total_egresos = 0.0
+                    ing_usd, egr_usd, ing_bs, egr_bs = 0.0, 0.0, 0.0, 0.0
 
                     for mov in reversed(movimientos):
+                        moneda = mov.get("moneda", "$") # Compatibilidad con registros viejos
+                        
                         if mov["tipo"] == "Ingreso":
-                            total_ingresos += mov["monto"]
-                            color_monto = ft.colors.GREEN_400
-                            icono = ft.icons.ARROW_UPWARD
+                            if moneda == "$": ing_usd += mov["monto"]
+                            else: ing_bs += mov["monto"]
+                            color, icono = ft.colors.GREEN_400, ft.icons.ARROW_UPWARD
                         else:
-                            total_egresos += mov["monto"]
-                            color_monto = ft.colors.RED_400
-                            icono = ft.icons.ARROW_DOWNWARD
+                            if moneda == "$": egr_usd += mov["monto"]
+                            else: egr_bs += mov["monto"]
+                            color, icono = ft.colors.RED_400, ft.icons.ARROW_DOWNWARD
                         
                         lista_movimientos.controls.append(
-                            ft.ListTile(
-                                leading=ft.Icon(icono, color=color_monto, size=30),
-                                title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD),
-                                subtitle=ft.Text(mov["fecha"]),
-                                trailing=ft.Text(f"${mov['monto']:.2f}", color=color_monto, weight=ft.FontWeight.BOLD, size=16),
-                                bgcolor=ft.colors.with_opacity(0.7, ft.colors.SURFACE_VARIANT)
-                            )
+                            ft.ListTile(leading=ft.Icon(icono, color=color, size=30), title=ft.Text(mov["concepto"], weight=ft.FontWeight.BOLD), subtitle=ft.Text(mov["fecha"]), trailing=ft.Text(f"{moneda} {mov['monto']:,.2f}", color=color, weight=ft.FontWeight.BOLD, size=16), bgcolor=ft.colors.with_opacity(0.7, ft.colors.SURFACE_VARIANT))
                         )
                     
-                    saldo_actual = total_ingresos - total_egresos
-                    lbl_saldo.value = f"${saldo_actual:,.2f}"
-                    lbl_ingresos.value = f"${total_ingresos:,.2f}"
-                    lbl_egresos.value = f"${total_egresos:,.2f}"
+                    saldo_usd_actual = ing_usd - egr_usd
+                    saldo_bs_actual = ing_bs - egr_bs
                     
-                    if saldo_actual < 0:
-                        lbl_saldo.color = ft.colors.RED_200
-                    else:
-                        lbl_saldo.color = ft.colors.BLUE_200
-                        
-                    # Refresca las conversiones automáticamente con el nuevo saldo
+                    lbl_saldo_usd.value = f"$ {saldo_usd_actual:,.2f}"
+                    lbl_saldo_bs.value = f"Bs {saldo_bs_actual:,.2f}"
+                    lbl_saldo_usd.color = ft.colors.RED_200 if saldo_usd_actual < 0 else ft.colors.BLUE_200
+                    lbl_saldo_bs.color = ft.colors.RED_200 if saldo_bs_actual < 0 else ft.colors.BLUE_200
+                    
+                    lbl_detalles_usd.value = f"Ing: ${ing_usd:,.0f} | Egr: ${egr_usd:,.0f}"
+                    lbl_detalles_bs.value = f"Ing: Bs{ing_bs:,.0f} | Egr: Bs{egr_bs:,.0f}"
+                    
                     calcular_equivalentes() 
-
-                except Exception as ex:
-                    notificar(f"Error Cargando: {ex}", ft.colors.RED_500)
+                except Exception as ex: notificar(f"Error Cargando: {ex}", ft.colors.RED_500)
                 page.update()
 
-            drop_tipo = ft.Dropdown(
-                label="Tipo de Registro", 
-                options=[ft.dropdown.Option("Ingreso"), ft.dropdown.Option("Egreso")],
-                value="Ingreso",
-                border_color=ft.colors.BLUE_400
-            )
+            # --- FORMULARIO DE NUEVO REGISTRO ---
+            drop_tipo = ft.Dropdown(label="Tipo", options=[ft.dropdown.Option("Ingreso"), ft.dropdown.Option("Egreso")], value="Ingreso", border_color=ft.colors.BLUE_400, width=130)
+            drop_moneda = ft.Dropdown(label="Moneda", options=[ft.dropdown.Option("$"), ft.dropdown.Option("Bs")], value="$", border_color=ft.colors.BLUE_400, width=100)
             txt_concepto = ft.TextField(label="Concepto", border_color=ft.colors.BLUE_400)
             txt_monto = ft.TextField(label="Monto", keyboard_type=ft.KeyboardType.NUMBER, border_color=ft.colors.BLUE_400)
             
@@ -413,114 +337,51 @@ def main(page: ft.Page):
                     boton_fecha.text = selector_fecha.value.strftime("%d/%m/%Y")
                     page.update()
 
-            selector_fecha = ft.DatePicker(
-                first_date=datetime(2020, 1, 1), 
-                last_date=datetime(2030, 12, 31), 
-                on_change=cambiar_fecha
-            )
-            boton_fecha = ft.OutlinedButton(
-                text=datetime.now().strftime("%d/%m/%Y"), 
-                icon=ft.icons.CALENDAR_MONTH, 
-                on_click=lambda e: page.open(selector_fecha)
-            )
+            selector_fecha = ft.DatePicker(first_date=datetime(2020, 1, 1), last_date=datetime(2030, 12, 31), on_change=cambiar_fecha)
+            boton_fecha = ft.OutlinedButton(text=datetime.now().strftime("%d/%m/%Y"), icon=ft.icons.CALENDAR_MONTH, on_click=lambda e: page.open(selector_fecha))
 
             def guardar_movimiento(e):
-                if not txt_concepto.value or not txt_monto.value:
-                    return notificar("Completa todos los campos", ft.colors.RED_700)
+                if not txt_concepto.value or not txt_monto.value: return notificar("Completa todos los campos", ft.colors.RED_700)
+                try: monto_float = float(txt_monto.value.replace(",", "."))
+                except: return notificar("El monto debe ser numérico", ft.colors.RED_700)
                 
                 try:
-                    monto_float = float(txt_monto.value.replace(",", "."))
-                except:
-                    return notificar("El monto debe ser numérico", ft.colors.RED_700)
-
-                try:
                     movimientos = page.client_storage.get("movimientos") or []
-                    movimientos.append({
-                        "tipo": drop_tipo.value,
-                        "concepto": txt_concepto.value,
-                        "monto": monto_float,
-                        "fecha": boton_fecha.text
-                    })
+                    movimientos.append({"tipo": drop_tipo.value, "moneda": drop_moneda.value, "concepto": txt_concepto.value, "monto": monto_float, "fecha": boton_fecha.text})
                     page.client_storage.set("movimientos", movimientos)
                     
                     page.close(dialogo_registro)
                     notificar("Registro guardado con éxito", ft.colors.GREEN_700)
-                    
-                    txt_concepto.value = ""
-                    txt_monto.value = ""
+                    txt_concepto.value = txt_monto.value = ""
                     cargar_datos()
-                    
-                except Exception as ex:
-                    notificar(f"Error al guardar: {ex}", ft.colors.RED_700)
+                except Exception as ex: notificar(f"Error al guardar: {ex}", ft.colors.RED_700)
 
             dialogo_registro = ft.AlertDialog(
                 title=ft.Text("Nuevo Registro"), 
-                content=ft.Column([
-                    drop_tipo, 
-                    txt_concepto, 
-                    txt_monto,
-                    ft.Row([ft.Text("Fecha:"), boton_fecha], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
-                ], tight=True), 
-                actions=[
-                    ft.FilledButton("Guardar", on_click=guardar_movimiento), 
-                    ft.TextButton("Cancelar", on_click=lambda e: page.close(dialogo_registro))
-                ]
+                content=ft.Column([ft.Row([drop_tipo, drop_moneda], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), txt_concepto, txt_monto, ft.Row([ft.Text("Fecha:"), boton_fecha], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)], tight=True), 
+                actions=[ft.FilledButton("Guardar", on_click=guardar_movimiento), ft.TextButton("Cancelar", on_click=lambda e: page.close(dialogo_registro))]
             )
 
-            page.floating_action_button = ft.FloatingActionButton(
-                icon=ft.icons.ADD, 
-                bgcolor=ft.colors.INDIGO_500, 
-                on_click=lambda e: page.open(dialogo_registro)
-            )
+            page.floating_action_button = ft.FloatingActionButton(icon=ft.icons.ADD, bgcolor=ft.colors.INDIGO_500, on_click=lambda e: page.open(dialogo_registro))
 
             imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.2)
+            boton_historial = ft.Container(content=ft.FilledButton("Ver Historial Detallado", icon=ft.icons.MANAGE_SEARCH, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500), on_click=lambda e: [actualizar_historial_filtrado(), page.open(dialogo_historico)], width=300), padding=10, alignment=ft.alignment.center)
 
-            boton_historial = ft.Container(
-                content=ft.FilledButton(
-                    "Ver Historial Detallado",
-                    icon=ft.icons.MANAGE_SEARCH,
-                    style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500),
-                    on_click=lambda e: [actualizar_historial_filtrado(), page.open(dialogo_historico)],
-                    width=300
-                ),
-                padding=10,
-                alignment=ft.alignment.center
-            )
+            contenido_principal = ft.Column([tarjeta_balance, ft.Container(content=ft.Text("Últimos Movimientos", weight=ft.FontWeight.BOLD), padding=10), lista_movimientos, boton_historial], expand=True)
 
-            contenido_principal = ft.Column([
-                tarjeta_balance,
-                ft.Container(content=ft.Text("Historial de Movimientos", weight=ft.FontWeight.BOLD), padding=10),
-                lista_movimientos,
-                boton_historial
-            ], expand=True)
-
-            page.add(
-                ft.Stack([
-                    ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center),
-                    contenido_principal
-                ], expand=True)
-            )
-            
+            page.add(ft.Stack([ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center), contenido_principal], expand=True))
             cargar_datos()
 
         # ==========================================
         # 3. VERIFICADOR DE ARRANQUE
         # ==========================================
-        if page.client_storage.contains_key("usuario"):
-            construir_interfaz_principal()
-        else:
-            mostrar_registro()
+        if page.client_storage.contains_key("usuario"): construir_interfaz_principal()
+        else: mostrar_registro()
 
     except Exception as e:
         error_trace = traceback.format_exc()
         page.clean()
-        page.add(
-            ft.ListView([
-                ft.Text("Error crítico detectado", color=ft.colors.RED_ACCENT, size=24, weight=ft.FontWeight.BOLD),
-                ft.Text(f"Mensaje: {e}", color=ft.colors.AMBER),
-                ft.Text(error_trace, size=12, selectable=True)
-            ], expand=True)
-        )
+        page.add(ft.ListView([ft.Text("Error crítico detectado", color=ft.colors.RED_ACCENT, size=24, weight=ft.FontWeight.BOLD), ft.Text(f"Mensaje: {e}", color=ft.colors.AMBER), ft.Text(error_trace, size=12, selectable=True)], expand=True))
         page.update()
 
 ft.app(target=main)
