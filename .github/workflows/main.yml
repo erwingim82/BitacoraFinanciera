@@ -24,7 +24,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Construir la App (AAB)
-        run: flet build aab
+        run: flet build aab --org com.erwingim --project bitacorafinanciera
 
       - name: Entregar Archivo Final
         uses: actions/upload-artifact@v4
