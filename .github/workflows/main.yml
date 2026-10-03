@@ -28,19 +28,31 @@ jobs:
         run: |
           echo "certifi" > requirements.txt
 
-      - name: Construir la App (APK y AAB)
+      - name: Construir la App y Forzar API 36
         run: |
-          # Esto genera la estructura inicial de Flutter/Android temporalmente
-          flet build apk --build-version "1.0.10" --build-number 11
-          
-          # Forzar el nivel de API 36 directamente en el build.gradle generado por Flet
-          find build/flutter/android -name "build.gradle" -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
-          find build/flutter/android -name "build.gradle" -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
-          find build/flutter/android -name "build.gradle" -exec sed -i 's/compileSdk 34/compileSdk 36/g' {} + || true
-          find build/flutter/android -name "build.gradle" -exec sed -i 's/targetSdk 34/targetSdk 36/g' {} + || true
+          # 1. Ejecutamos un comando rápido de Flet para que descargue y genere la plantilla del proyecto en build/flutter
+          flet build apk --build-version "1.0.11" --build-number 12 || true
 
-          # Compilar definitivamente el AAB con la API 36 inyectada
-          yes | flet build aab --build-version "1.0.10" --build-number 11 --org com.erwingim --project bitacorafinanciera
+          # 2. PARCHE CRÍTICO: Buscar y reemplazar cualquier rastro de la API 34 por la API 36 en todos los archivos gradle generados
+          echo "Forzando API 36 en los archivos de Gradle generados..."
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} +
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} +
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} +
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} +
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk 34/compileSdk 36/g' {} +
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk 34/targetSdk 36/g' {} +
+
+          # También revisamos si existe el archivo android/app/build.gradle directamente
+          if [ -f "build/flutter/android/app/build.gradle" ]; then
+            sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 36/g' build/flutter/android/app/build.gradle
+            sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 36/g' build/flutter/android/app/build.gradle
+            sed -i 's/compileSdk = [0-9]*/compileSdk = 36/g' build/flutter/android/app/build.gradle
+            sed -i 's/targetSdk = [0-9]*/targetSdk = 36/g' build/flutter/android/app/build.gradle
+          fi
+
+          # 3. Compilar definitivamente los artefactos limpios ya modificados
+          yes | flet build apk --build-version "1.0.11" --build-number 12
+          yes | flet build aab --build-version "1.0.11" --build-number 12 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
