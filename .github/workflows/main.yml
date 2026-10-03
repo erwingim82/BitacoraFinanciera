@@ -28,27 +28,29 @@ jobs:
           flet build apk
           flet build aab --org com.erwingim --project bitacorafinanciera
 
-      - name: Firmar el archivo AAB con apksigner (Modo Producción)
+      - name: Firmar el AAB con Bundletool (Oficial de Google)
         run: |
-          # Encontrar la ruta del build-tools de Android instalado en el servidor
-          BUILD_TOOLS_DIR=$(find $ANDROID_SDK_ROOT/build-tools -maxdepth 1 -mindepth 1 | sort | tail -n 1)
-          APKSIGNER="$BUILD_TOOLS_DIR/apksigner"
+          # Descargar bundletool oficial
+          curl -L -o bundletool.jar https://github.com/google/bundletool/releases/download/1.17.2/bundletool-all-1.17.2.jar
           
-          # Limpiar cualquier firma anterior por defecto
-          AAB_FILE=$(find build/aab -name "*.aab" | head -n 1)
-          zip -d "$AAB_FILE" META-INF/\* || true
+          # Localizar el archivo AAB generado
+          AAB_ORIGINAL=$(find build/aab -name "*.aab" | head -n 1)
+          AAB_FIRMADO="build/aab/Bitacora-Oficial.aab"
           
-          # Firmar correctamente con la herramienta oficial de Google
-          $APKSIGNER sign --ks bitacora-key.keystore --ks-pass pass:bitacora2026 --key-pass pass:bitacora2026 "$AAB_FILE"
-          
-          # Verificar que la firma sea válida
-          $APKSIGNER verify "$AAB_FILE"
+          # Firmar correctamente con la herramienta de Google
+          java -jar bundletool.jar sign \
+            --bundle="$AAB_ORIGINAL" \
+            --output="$AAB_FIRMADO" \
+            --ks=bitacora-key.keystore \
+            --ks-pass=pass:bitacora2026 \
+            --ks-key-alias=bitacora \
+            --key-pass=pass:bitacora2026
 
-      - name: Entregar Archivo AAB Firmado
+      - name: Entregar Archivo AAB Oficial
         uses: actions/upload-artifact@v4
         with:
           name: Bitacora-AAB-Oficial
-          path: build/aab/**/*.aab
+          path: build/aab/Bitacora-Oficial.aab
 
       - name: Entregar Archivo APK
         uses: actions/upload-artifact@v4
