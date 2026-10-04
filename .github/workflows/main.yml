@@ -28,32 +28,32 @@ jobs:
         run: |
           echo "certifi" > requirements.txt
 
-      - name: SECUESTRAR FLUTTER (El Truco Maestro para API 36)
+      - name: SECUESTRAR FLUTTER Y FORZAR API 36 DE RAÍZ
         run: |
-          # Buscamos dónde está instalado el Flutter original y lo renombramos
           REAL_FLUTTER=$(which flutter)
           mv $REAL_FLUTTER ${REAL_FLUTTER}_real
           
-          # Creamos un "falso" flutter que parchará la API justo antes de compilar
           cat << 'EOF' > $REAL_FLUTTER
           #!/bin/bash
           echo "--- INTERCEPTANDO FLUTTER PARA FORZAR API 36 ---"
-          find . -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
           
-          # Dejamos que el Flutter real haga su trabajo conservando las variables de Python
+          # Buscamos y parchamos agresivamente cualquier archivo build.gradle en el directorio de trabajo
+          find . -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 36/g' {} + || true
+          find . -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 36/g' {} + || true
+          find . -name "build.gradle" -type f -exec sed -i 's/compileSdk = [0-9]*/compileSdk = 36/g' {} + || true
+          find . -name "build.gradle" -type f -exec sed -i 's/targetSdk = [0-9]*/targetSdk = 36/g' {} + || true
+          find . -name "build.gradle" -type f -exec sed -i 's/compileSdk [0-9]*/compileSdk 36/g' {} + || true
+          find . -name "build.gradle" -type f -exec sed -i 's/targetSdk [0-9]*/targetSdk 36/g' {} + || true
+
           exec "${0}_real" "$@"
           EOF
           
-          # Le damos permisos de ejecución a nuestro interceptor
           chmod +x $REAL_FLUTTER
 
-      - name: Construir la App (APK y AAB) de forma natural
+      - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.22" --build-number 22 --org com.erwingim --project bitacorafinanciera
-          yes | flet build aab --build-version "1.0.22" --build-number 22 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.21" --build-number 23 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --build-version "1.0.21" --build-number 23 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
