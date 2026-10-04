@@ -78,7 +78,7 @@ def main(page: ft.Page):
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
                     ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Versión 1.5\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Versión 1.6\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
                 ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))]
             )
@@ -276,4 +276,5 @@ def main(page: ft.Page):
         )
         page.update()
 
-ft.app(main)
+# Arranque directo (Sin el IF __name__ == "__main__")
+ft.app(target=main)
