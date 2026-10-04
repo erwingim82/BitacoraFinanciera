@@ -20,7 +20,11 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet Estable (0.25.2)
+      - name: Aceptar licencias de Android automáticamente
+        run: |
+          yes | flutter doctor --android-licenses || true
+
+      - name: Instalar Flet Estable (0.25.2) y Certifi
         run: |
           pip install flet==0.25.2 certifi
 
@@ -28,32 +32,10 @@ jobs:
         run: |
           echo "certifi" > requirements.txt
 
-      - name: SECUESTRAR FLUTTER Y FORZAR API 36 DE RAÍZ
-        run: |
-          REAL_FLUTTER=$(which flutter)
-          mv $REAL_FLUTTER ${REAL_FLUTTER}_real
-          
-          cat << 'EOF' > $REAL_FLUTTER
-          #!/bin/bash
-          echo "--- INTERCEPTANDO FLUTTER PARA FORZAR API 36 ---"
-          
-          # Buscamos y parchamos agresivamente cualquier archivo build.gradle en el directorio de trabajo
-          find . -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion [0-9]*/compileSdkVersion 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion [0-9]*/targetSdkVersion 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/compileSdk = [0-9]*/compileSdk = 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/targetSdk = [0-9]*/targetSdk = 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/compileSdk [0-9]*/compileSdk 36/g' {} + || true
-          find . -name "build.gradle" -type f -exec sed -i 's/targetSdk [0-9]*/targetSdk 36/g' {} + || true
-
-          exec "${0}_real" "$@"
-          EOF
-          
-          chmod +x $REAL_FLUTTER
-
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.21" --build-number 23 --org com.erwingim --project bitacorafinanciera
-          yes | flet build aab --build-version "1.0.21" --build-number 23 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.24" --build-number 24 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --build-version "1.0.24" --build-number 24 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
