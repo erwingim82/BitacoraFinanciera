@@ -31,8 +31,8 @@ jobs:
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.20" --build-number 21
-          yes | flet build aab --build-version "1.0.20" --build-number 21 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.19" --build-number 20
+          yes | flet build aab --build-version "1.0.19" --build-number 20 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
