@@ -32,10 +32,24 @@ jobs:
         run: |
           echo "certifi" > requirements.txt
 
-      - name: Construir la App (APK y AAB)
+      - name: Generar estructura del proyecto con Flet (Paso 1)
         run: |
-          yes | flet build apk --build-version "1.0.24" --build-number 24 --org com.erwingim --project bitacorafinanciera
-          yes | flet build aab --build-version "1.0.24" --build-number 24 --org com.erwingim --project bitacorafinanciera
+          # Esto descarga la plantilla base temporalmente sin compilar del todo el AAB final
+          flet build apk --build-version "1.0.25" --build-number 25 --org com.erwingim --project bitacorafinanciera || true
+
+      - name: Forzar API 36 Directamente en los Archivos de Gradle Generados (Paso 2)
+        run: |
+          echo "Buscando y actualizando SDKs a la API 36..."
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk 34/compileSdk 36/g' {} + || true
+          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk 34/targetSdk 36/g' {} + || true
+
+      - name: Compilar Definitivamente el AAB (Paso 3)
+        run: |
+          yes | flet build aab --build-version "1.0.25" --build-number 25 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
