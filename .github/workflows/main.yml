@@ -20,23 +20,35 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet Última Versión en el Servidor
+      - name: Instalar Flet Estable (0.25.2)
         run: |
-          pip install --upgrade flet
+          pip install flet==0.25.2 certifi
 
-      - name: Configurar requerimientos móviles (CORRECCIÓN CRÍTICA)
+      - name: Configurar requerimientos móviles
         run: |
-          # Solo incluimos certifi. Si ponemos "flet" aquí, la app se rompe en Android.
           echo "certifi" > requirements.txt
 
-      - name: Construir la App (APK y AAB)
+      - name: Construir Base y APK con Flet 0.25.2
         run: |
-          yes | flet build apk --build-version "1.0.19" --build-number 20
-          yes | flet build aab --build-version "1.0.19" --build-number 20 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.20" --build-number 20 --org com.erwingim --project bitacorafinanciera
+
+      - name: Forzar API 36 en el motor nativo de Flutter
+        run: |
+          echo "Inyectando API 36 directamente en el código fuente de Flutter..."
+          sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' build/flutter/android/app/build.gradle || true
+          sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' build/flutter/android/app/build.gradle || true
+          sed -i 's/compileSdk = 34/compileSdk = 36/g' build/flutter/android/app/build.gradle || true
+          sed -i 's/targetSdk = 34/targetSdk = 36/g' build/flutter/android/app/build.gradle || true
+
+      - name: Compilar AAB Final con Flutter Nativo
+        run: |
+          cd build/flutter
+          flutter build appbundle --release --build-name="1.0.20" --build-number=20
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
-          AAB_FILE=$(find build/aab -name "*.aab" | head -n 1)
+          # El AAB nativo de Flutter se genera en otra ruta
+          AAB_FILE=$(find build/flutter/build/app/outputs/bundle/release -name "*.aab" | head -n 1)
           
           # Limpiar firmas genéricas previas
           zip -d "$AAB_FILE" META-INF/\* || true
@@ -50,11 +62,15 @@ jobs:
             -keypass bitacora2026 \
             "$AAB_FILE" bitacora
 
+          # Mover el AAB firmado para el artefacto
+          mkdir -p build/aab_final
+          mv "$AAB_FILE" build/aab_final/
+
       - name: Entregar Archivo AAB Oficial
         uses: actions/upload-artifact@v4
         with:
           name: Bitacora-AAB-Oficial
-          path: build/aab/**/*.aab
+          path: build/aab_final/**/*.aab
 
       - name: Entregar Archivo APK
         uses: actions/upload-artifact@v4
