@@ -27,11 +27,12 @@ jobs:
       - name: Configurar requerimientos móviles
         run: |
           echo "flet" > requirements.txt
+          echo "certifi" >> requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
-          yes | flet build apk --build-version "1.0.17" --build-number 18
-          yes | flet build aab --build-version "1.0.18" --build-number 18 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.18" --build-number 19
+          yes | flet build aab --build-version "1.0.18" --build-number 19 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
