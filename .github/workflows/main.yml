@@ -20,13 +20,14 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet y Dependencias Limpias
+      - name: Instalar Flet 1.0 y Dependencias
         run: |
           pip install --upgrade flet certifi
 
-      - name: Configurar requerimientos móviles
+      - name: Configurar requerimientos móviles (Corrección Clave)
         run: |
-          echo "certifi" > requirements.txt
+          echo "flet" > requirements.txt
+          echo "certifi" >> requirements.txt
 
       - name: Construir la App (APK y AAB)
         run: |
