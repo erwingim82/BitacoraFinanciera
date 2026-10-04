@@ -23,7 +23,7 @@ def main(page: ft.Page):
             return float(texto)
 
         def notificar(mensaje, color=ft.colors.GREEN_700):
-            page.open(ft.SnackBar(ft.Text(mensaje, color=ft.colors.WHITE), bgcolor=color, duration=3000))
+            page.open(ft.SnackBar(content=ft.Text(mensaje, color=ft.colors.WHITE), bgcolor=color, duration=3000))
 
         def mostrar_registro():
             page.clean()
@@ -78,7 +78,7 @@ def main(page: ft.Page):
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
                     ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Versión 1.4\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
+                    ft.Text("Versión 1.5\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
                 ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))]
             )
@@ -154,13 +154,16 @@ def main(page: ft.Page):
                     ft.Divider(),
                     ft.Text("2. Calcula tus montos:", size=12, color=ft.colors.WHITE70),
                     ft.Row([txt_monto_conv, drop_tipo_conv], alignment=ft.MainAxisAlignment.CENTER),
-                    ft.Container(padding=15, bgcolor=ft.colors.with_opacity(0.3, ft.colors.SURFACE_VARIANT), border_radius=10, content=ft.Column([lbl_res_bcv, lbl_res_eur, lbl_res_usdt], spacing=5))
+                    ft.Container(padding=15, bgcolor=ft.colors.SURFACE_VARIANT, border_radius=10, content=ft.Column([lbl_res_bcv, lbl_res_eur, lbl_res_usdt], spacing=5))
                 ], tight=True)),
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_convertidor))]
             )
 
             page.appbar = ft.AppBar(
-                title=ft.Text("Bitácora Financiera", weight=ft.FontWeight.BOLD, size=18),
+                title=ft.Row([
+                    ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.BLUE_300, size=28),
+                    ft.Text("BF", weight=ft.FontWeight.BOLD, size=20)
+                ], tight=True, alignment=ft.MainAxisAlignment.CENTER, spacing=8),
                 center_title=True, bgcolor=ft.colors.SURFACE_VARIANT, elevation=5,
                 actions=[
                     ft.IconButton(icon=ft.icons.PRICE_CHANGE, tooltip="Convertidor", on_click=lambda e: [ejecutar_conversion(), page.open(dialogo_convertidor)]),
@@ -266,9 +269,11 @@ def main(page: ft.Page):
     except Exception as e:
         error_trace = traceback.format_exc()
         page.clean()
-        page.add(ft.ListView([ft.Text("Error Crítico:", color=ft.colors.RED, size=20), ft.Text(str(e)), ft.Text(error_trace, size=10, selectable=True)], expand=True))
+        page.add(
+            ft.Text("ERROR CRÍTICO", color="red", size=20, weight="bold"),
+            ft.Text(str(e), color="orange"),
+            ft.Text(error_trace, size=10, selectable=True)
+        )
         page.update()
 
-# ESTA ES LA CORRECCIÓN CLAVE PARA ANDROID
-if __name__ == "__main__":
-    ft.app(target=main)
+ft.app(main)
