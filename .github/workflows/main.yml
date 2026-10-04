@@ -20,36 +20,18 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Aceptar licencias de Android automáticamente
+      - name: Instalar la última versión de Flet compatible con API 36
         run: |
-          yes | flutter doctor --android-licenses || true
+          pip install --upgrade flet certifi
 
-      - name: Instalar Flet Estable (0.25.2) y Certifi
-        run: |
-          pip install flet==0.25.2 certifi
-
-      - name: Configurar dependencias móviles
+      - name: Configurar requerimientos móviles
         run: |
           echo "certifi" > requirements.txt
 
-      - name: Generar estructura del proyecto con Flet (Paso 1)
+      - name: Construir la App (APK y AAB) con Flet Actualizado
         run: |
-          # Esto descarga la plantilla base temporalmente sin compilar del todo el AAB final
-          flet build apk --build-version "1.0.25" --build-number 25 --org com.erwingim --project bitacorafinanciera || true
-
-      - name: Forzar API 36 Directamente en los Archivos de Gradle Generados (Paso 2)
-        run: |
-          echo "Buscando y actualizando SDKs a la API 36..."
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/compileSdk 34/compileSdk 36/g' {} + || true
-          find build/flutter -name "build.gradle" -type f -exec sed -i 's/targetSdk 34/targetSdk 36/g' {} + || true
-
-      - name: Compilar Definitivamente el AAB (Paso 3)
-        run: |
-          yes | flet build aab --build-version "1.0.25" --build-number 25 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.26" --build-number 26 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --build-version "1.0.26" --build-number 26 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
