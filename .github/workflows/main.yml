@@ -42,11 +42,11 @@ jobs:
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --template-dir ./custom_template --build-version "1.0.35" --build-number 35 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.36" --build-number 36 --org com.erwingim --project bitacorafinanciera
 
       - name: Construir AAB para Google Play Console con API 36
         run: |
-          yes | flet build aab --template-dir ./custom_template --build-version "1.0.35" --build-number 35 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --template-dir "$PWD/custom_template" --build-version "1.0.36" --build-number 36 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
