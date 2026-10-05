@@ -20,18 +20,31 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar Flet Estable (0.25.2) y Certifi
+      - name: Aceptar licencias de Android automáticamente
         run: |
-          pip install flet==0.25.2 certifi
+          yes | flutter doctor --android-licenses || true
 
       - name: Configurar requerimientos móviles
         run: |
           echo "certifi" > requirements.txt
 
-      - name: Construir la App (APK y AAB) con Flet Estable
+      # 1. COMPILAR EL APK CON FLET ESTABLE (0.25.2) PARA TU CELULAR
+      - name: Instalar Flet Estable para APK (0.25.2)
         run: |
-          yes | flet build apk --build-version "1.0.27" --build-number 27 --org com.erwingim --project bitacorafinanciera
-          yes | flet build aab --build-version "1.0.27" --build-number 27 --org com.erwingim --project bitacorafinanciera
+          pip install flet==0.25.2 certifi
+
+      - name: Construir APK Estable
+        run: |
+          yes | flet build apk --build-version "1.0.30" --build-number 30 --org com.erwingim --project bitacorafinanciera
+
+      # 2. COMPILAR EL AAB CON FLET MODERNO PARA CUMPLIR CON LA API 36 DE GOOGLE PLAY
+      - name: Actualizar a Flet Moderno para AAB (API 36 Nativa)
+        run: |
+          pip install --upgrade flet certifi
+
+      - name: Construir AAB para Google Play Console
+        run: |
+          yes | flet build aab --build-version "1.0.30" --build-number 30 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
