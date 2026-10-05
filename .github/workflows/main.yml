@@ -35,16 +35,17 @@ jobs:
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --build-version "1.0.33" --build-number 33 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.34" --build-number 34 --org com.erwingim --project bitacorafinanciera
 
-      # 2. COMPILAR EL AAB CON FLET MODERNO Y LA SINTAXIS CORRECTA CON IGUAL (=)
-      - name: Actualizar a Flet Moderno para AAB (API 36 Nativa)
+      # 2. LIMPIAR CACHÉ DE GRADLE Y ACTUALIZAR A FLET MODERNO PARA EL AAB
+      - name: Limpiar caché corrupto y actualizar a Flet Moderno
         run: |
+          rm -rf ~/.gradle/caches
           pip install --upgrade flet certifi
 
       - name: Construir AAB para Google Play Console
         run: |
-          yes | flet build aab --build-version "1.0.33" --build-number 33 --org com.erwingim --project bitacorafinanciera --flutter-build-args="--android-skip-build-dependency-validation"
+          yes | flet build aab --build-version "1.0.34" --build-number 34 --org com.erwingim --project bitacorafinanciera --flutter-build-args="--android-skip-build-dependency-validation"
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
