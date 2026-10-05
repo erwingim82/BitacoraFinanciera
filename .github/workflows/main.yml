@@ -42,27 +42,20 @@ jobs:
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.36" --build-number 36 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.37" --build-number 37 --org com.erwingim --project bitacorafinanciera
 
-      - name: Construir AAB para Google Play Console con API 36
+      - name: Construir y Firmar AAB Oficial para Google Play Console con API 36
         run: |
-          yes | flet build aab --template-dir "$PWD/custom_template" --build-version "1.0.36" --build-number 36 --org com.erwingim --project bitacorafinanciera
-
-      - name: Firmar el archivo AAB correctamente para Google Play
-        run: |
-          AAB_FILE=$(find build/aab -name "*.aab" | head -n 1)
-          
-          # Limpiar firmas genéricas previas
-          zip -d "$AAB_FILE" META-INF/\* || true
-          
-          # Firmar usando jarsigner con los estándares de Google Play
-          jarsigner -verbose \
-            -sigalg SHA256withRSA \
-            -digestalg SHA-256 \
-            -keystore bitacora-key.keystore \
-            -storepass bitacora2026 \
-            -keypass bitacora2026 \
-            "$AAB_FILE" bitacora
+          yes | flet build aab \
+            --template-dir "$PWD/custom_template" \
+            --build-version "1.0.37" \
+            --build-number 37 \
+            --org com.erwingim \
+            --project bitacorafinanciera \
+            --android-signing-key-store "bitacora-key.keystore" \
+            --android-signing-key-store-password "bitacora2026" \
+            --android-signing-key-alias "bitacora" \
+            --android-signing-key-password "bitacora2026"
 
       - name: Entregar Archivo AAB Oficial
         uses: actions/upload-artifact@v4
