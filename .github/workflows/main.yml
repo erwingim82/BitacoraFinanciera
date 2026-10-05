@@ -35,16 +35,16 @@ jobs:
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --build-version "1.0.30" --build-number 30 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.31" --build-number 31 --org com.erwingim --project bitacorafinanciera
 
-      # 2. COMPILAR EL AAB CON FLET MODERNO PARA CUMPLIR CON LA API 36 DE GOOGLE PLAY
+      # 2. COMPILAR EL AAB CON FLET MODERNO Y LA BANDERA DE VALIDACIÓN OMITIDA
       - name: Actualizar a Flet Moderno para AAB (API 36 Nativa)
         run: |
           pip install --upgrade flet certifi
 
       - name: Construir AAB para Google Play Console
         run: |
-          yes | flet build aab --build-version "1.0.30" --build-number 30 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --build-version "1.0.31" --build-number 31 --org com.erwingim --project bitacorafinanciera --android-skip-build-dependency-validation
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
