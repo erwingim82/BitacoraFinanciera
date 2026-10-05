@@ -39,20 +39,22 @@ jobs:
           find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
           find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
           find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 35/compileSdkVersion 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdk = 35/compileSdk = 36/g' {} + || true
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.37" --build-number 37 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.38" --build-number 38 --org com.erwingim --project bitacorafinanciera
 
       - name: Construir y Firmar AAB Oficial para Google Play Console con API 36
         run: |
           yes | flet build aab \
             --template-dir "$PWD/custom_template" \
-            --build-version "1.0.37" \
-            --build-number 37 \
+            --build-version "1.0.38" \
+            --build-number 38 \
             --org com.erwingim \
             --project bitacorafinanciera \
-            --android-signing-key-store "bitacora-key.keystore" \
+            --android-signing-key-store "$PWD/bitacora-key.keystore" \
             --android-signing-key-store-password "bitacora2026" \
             --android-signing-key-alias "bitacora" \
             --android-signing-key-password "bitacora2026"
