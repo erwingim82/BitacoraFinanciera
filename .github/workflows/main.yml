@@ -20,18 +20,18 @@ jobs:
         with:
           flutter-version: '3.24.3'
 
-      - name: Instalar la última versión de Flet compatible con API 36
+      - name: Instalar Flet Estable (0.25.2) y Certifi
         run: |
-          pip install --upgrade flet certifi
+          pip install flet==0.25.2 certifi
 
       - name: Configurar requerimientos móviles
         run: |
           echo "certifi" > requirements.txt
 
-      - name: Construir la App (APK y AAB) con Flet Actualizado
+      - name: Construir la App (APK y AAB) con Flet Estable
         run: |
-          yes | flet build apk --build-version "1.0.26" --build-number 26 --org com.erwingim --project bitacorafinanciera
-          yes | flet build aab --build-version "1.0.26" --build-number 26 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --build-version "1.0.27" --build-number 27 --org com.erwingim --project bitacorafinanciera
+          yes | flet build aab --build-version "1.0.27" --build-number 27 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
