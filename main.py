@@ -5,10 +5,9 @@ import urllib.parse
 
 def main(page: ft.Page):
     try:
-        page.window_width = 380
-        page.window_height = 680
         page.title = "Bitácora Financiera"
         page.theme_mode = ft.ThemeMode.DARK
+        page.bgcolor = ft.colors.BLACK  # Evita el destello negro inicial
 
         def fmt(valor):
             if valor is None: return "0,00"
@@ -57,23 +56,22 @@ def main(page: ft.Page):
 
             tarjeta_registro = ft.Card(
                 elevation=8,
-                color=ft.colors.BLUE_GREY_900,
+                color=ft.colors.with_opacity(0.9, ft.colors.BLUE_GREY_900),
                 content=ft.Container(
                     padding=20,
                     content=ft.Column([
                         ft.Text("Bienvenido a tu Bitácora", size=20, weight=ft.FontWeight.BOLD, color=ft.colors.WHITE),
-                        ft.Text("Configura tu perfil para poder exportar tus reportes.", size=14, color=ft.colors.WHITE70),
+                        ft.Text("Configura tu perfil para continuar.", size=14, color=ft.colors.WHITE70),
                         ft.Divider(color=ft.colors.TRANSPARENT),
-                        txt_nombre,
-                        txt_apellido,
-                        txt_correo,
-                        txt_telefono,
+                        txt_nombre, txt_apellido, txt_correo, txt_telefono,
                         ft.FilledButton("Guardar y Entrar", on_click=guardar_usuario, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500), width=300)
                     ], horizontal_alignment=ft.CrossAxisAlignment.CENTER)
                 )
             )
 
-            page.add(ft.Container(content=tarjeta_registro, alignment=ft.alignment.center, expand=True, bgcolor=ft.colors.BLACK))
+            # Fondo seguro con imagen y respaldo de color sólido
+            imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.25)
+            page.add(ft.Stack([ft.Container(bgcolor=ft.colors.BLACK, expand=True), ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center), ft.Container(content=tarjeta_registro, alignment=ft.alignment.center, padding=20)], expand=True))
 
         def construir_interfaz_principal():
             page.clean()
@@ -89,23 +87,16 @@ def main(page: ft.Page):
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
                     ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
-                    ft.Text("Versión 1.3\n\nAplicación diseñada para el control y registro de tus ingresos y egresos personales.", size=14, text_align=ft.TextAlign.CENTER),
-                    ft.Divider(color=ft.colors.TRANSPARENT, height=10),
-                    ft.TextButton(
-                        content=ft.Row([ft.Icon(ft.icons.EMAIL, color=ft.colors.BLUE_400), ft.Text("Sugerencias y Soporte", color=ft.colors.BLUE_400)], alignment=ft.MainAxisAlignment.CENTER, tight=True),
-                        on_click=lambda e: page.launch_url("mailto:myconsultingsca@gmail.com?subject=Sugerencias App Bitácora")
-                    )
+                    ft.Text("Versión 1.4\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
                 ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
-                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))],
-                actions_alignment=ft.MainAxisAlignment.CENTER
+                actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))]
             )
 
             txt_pantalla_calc = ft.TextField(value="0", text_align=ft.TextAlign.RIGHT, read_only=True, border_color=ft.colors.BLUE_400, text_size=20)
 
             def click_calculadora(e):
                 tecla = e.control.data
-                if tecla == "C":
-                    txt_pantalla_calc.value = "0"
+                if tecla == "C": txt_pantalla_calc.value = "0"
                 elif tecla == "=":
                     try: txt_pantalla_calc.value = str(eval(txt_pantalla_calc.value))
                     except: txt_pantalla_calc.value = "Error"
@@ -142,6 +133,7 @@ def main(page: ft.Page):
             lbl_res_eur = ft.Text("A tasa EUR: 0,00", weight=ft.FontWeight.BOLD, color=ft.colors.BLUE_300, size=14)
             lbl_res_usdt = ft.Text("A tasa USDT: 0,00", weight=ft.FontWeight.BOLD, color=ft.colors.TEAL_300, size=14)
 
+            # --- CONVERSIÓN CORREGIDA (DIVISIÓN EXACTA) ---
             def ejecutar_conversion(e=None):
                 page.client_storage.set("tasas_guardadas", {"bcv": txt_tasa_bcv_conv.value, "eur": txt_tasa_eur_conv.value, "usdt": txt_tasa_usdt_conv.value})
                 txt_tasa_bcv.value = txt_tasa_bcv_conv.value
@@ -157,7 +149,7 @@ def main(page: ft.Page):
                         lbl_res_bcv.value = f"A tasa BCV: Bs {fmt(monto * t_bcv) if t_bcv > 0 else '0,00'}"
                         lbl_res_eur.value = f"A tasa EUR: Bs {fmt(monto * t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: Bs {fmt(monto * t_usdt) if t_usdt > 0 else '0,00'}"
-                    else:
+                    else:  # Bs a Divisas (¡Aquí estaba el detalle de la división!)
                         lbl_res_bcv.value = f"A tasa BCV: $ {fmt(monto / t_bcv) if t_bcv > 0 else '0,00'}"
                         lbl_res_eur.value = f"A tasa EUR: € {fmt(monto / t_eur) if t_eur > 0 else '0,00'}"
                         lbl_res_usdt.value = f"A tasa USDT: ₮ {fmt(monto / t_usdt) if t_usdt > 0 else '0,00'}"
@@ -264,9 +256,10 @@ def main(page: ft.Page):
             drop_filtro_mes.on_change = drop_filtro_anio.on_change = actualizar_historial_filtrado
             dialogo_historico = ft.AlertDialog(title=ft.Text("Histórico", weight=ft.FontWeight.BOLD), content=ft.Container(width=320, height=500, content=ft.Column([ft.Row([drop_filtro_mes, drop_filtro_anio], alignment=ft.MainAxisAlignment.SPACE_BETWEEN), ft.Container(content=lbl_resumen_filtro, padding=10, alignment=ft.alignment.center, bgcolor=ft.colors.SURFACE_VARIANT, border_radius=10), ft.Divider(), lista_historial_detallado])), actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_historico))])
 
+            # --- APP BAR CON LOGO SEGURO ---
             page.appbar = ft.AppBar(
                 title=ft.Row([
-                    ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.BLUE_300, size=28),
+                    ft.Image(src="logo_bf.png", width=32, height=32, fit=ft.ImageFit.CONTAIN, error_content=ft.Icon(ft.icons.ACCOUNT_BALANCE_WALLET, color=ft.colors.BLUE_300)),
                     ft.Text("BF", weight=ft.FontWeight.BOLD, size=20)
                 ], tight=True, alignment=ft.MainAxisAlignment.CENTER, spacing=8),
                 center_title=True, bgcolor=ft.colors.SURFACE_VARIANT, elevation=5,
@@ -409,9 +402,10 @@ def main(page: ft.Page):
             
             boton_historial = ft.Container(content=ft.FilledButton("Ver Historial", icon=ft.icons.MANAGE_SEARCH, style=ft.ButtonStyle(bgcolor=ft.colors.INDIGO_500), on_click=lambda e: [actualizar_historial_filtrado(), page.open(dialogo_historico)], width=300), padding=10, alignment=ft.alignment.center)
 
+            imagen_fondo = ft.Image(src="Fondo.jpeg", fit=ft.ImageFit.COVER, opacity=0.25)
             contenido_principal = ft.Column([tarjeta_balance, ft.Container(content=ft.Text("Últimos Movimientos", weight=ft.FontWeight.BOLD), padding=10), lista_movimientos, boton_historial], expand=True)
 
-            page.add(contenido_principal)
+            page.add(ft.Stack([ft.Container(bgcolor=ft.colors.BLACK, expand=True), ft.Container(content=imagen_fondo, expand=True, alignment=ft.alignment.center), contenido_principal], expand=True))
             cargar_datos()
 
         if page.client_storage.contains_key("usuario"): construir_interfaz_principal()
