@@ -38,22 +38,24 @@ jobs:
         run: |
           pip install flet==0.25.2 certifi
 
-      - name: Preparar Plantilla Oficial (API 35)
+      - name: Preparar Plantilla Oficial para API 36 (Exigencia de Google Play)
         run: |
           git clone --branch 0.25.2 https://github.com/flet-dev/flet-build-template.git custom_template
-          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 35/g' {} + || true
-          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 35/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.41" --build-number 41 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.42" --build-number 42 --org com.erwingim --project bitacorafinanciera
 
       - name: Construir y Firmar AAB Oficial para Google Play
         run: |
           yes | flet build aab \
             --template-dir "$PWD/custom_template" \
-            --build-version "1.0.41" \
-            --build-number 41 \
+            --build-version "1.0.42" \
+            --build-number 42 \
             --org com.erwingim \
             --project bitacorafinanciera \
             --android-signing-key-store "$PWD/bitacora-key.keystore" \
