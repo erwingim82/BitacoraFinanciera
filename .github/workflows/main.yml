@@ -28,24 +28,25 @@ jobs:
         run: |
           echo "certifi" > requirements.txt
 
-      # 1. COMPILAR EL APK CON FLET ESTABLE (0.25.2) PARA TU CELULAR
-      - name: Instalar Flet Estable para APK (0.25.2)
+      - name: Instalar Flet Estable (0.25.2) y Certifi
         run: |
           pip install flet==0.25.2 certifi
 
+      - name: Preparar y Parchar Plantilla Oficial para API 36
+        run: |
+          git clone --branch 0.25.2 https://github.com/flet-dev/flet-build-template.git custom_template
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdkVersion 34/compileSdkVersion 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdkVersion 34/targetSdkVersion 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/compileSdk = 34/compileSdk = 36/g' {} + || true
+          find custom_template -name "build.gradle" -type f -exec sed -i 's/targetSdk = 34/targetSdk = 36/g' {} + || true
+
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --build-version "1.0.34" --build-number 34 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir ./custom_template --build-version "1.0.35" --build-number 35 --org com.erwingim --project bitacorafinanciera
 
-      # 2. LIMPIAR CACHÉ DE GRADLE Y ACTUALIZAR A FLET MODERNO PARA EL AAB
-      - name: Limpiar caché corrupto y actualizar a Flet Moderno
+      - name: Construir AAB para Google Play Console con API 36
         run: |
-          rm -rf ~/.gradle/caches
-          pip install --upgrade flet certifi
-
-      - name: Construir AAB para Google Play Console
-        run: |
-          yes | flet build aab --build-version "1.0.34" --build-number 34 --org com.erwingim --project bitacorafinanciera --flutter-build-args="--android-skip-build-dependency-validation"
+          yes | flet build aab --template-dir ./custom_template --build-version "1.0.35" --build-number 35 --org com.erwingim --project bitacorafinanciera
 
       - name: Firmar el archivo AAB correctamente para Google Play
         run: |
