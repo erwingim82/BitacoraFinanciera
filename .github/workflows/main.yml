@@ -54,7 +54,7 @@ jobs:
 
       - name: Construir APK Estable
         run: |
-          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.43" --build-number 43 --org com.erwingim --project bitacorafinanciera
+          yes | flet build apk --template-dir "$PWD/custom_template" --build-version "1.0.44" --build-number 44 --org com.erwingim --project bitacorafinanciera
 
       - name: Construir y Firmar AAB Oficial para Google Play
         run: |
