@@ -5,7 +5,7 @@ import urllib.parse
 
 def main(page: ft.Page):
     try:
-        page.title = "Mis Reales"
+        page.title = "Bitácora Financiera"
         page.theme_mode = ft.ThemeMode.DARK
         page.bgcolor = ft.colors.BLACK  # Evita el destello negro inicial
 
@@ -86,7 +86,7 @@ def main(page: ft.Page):
             dialogo_acerca = ft.AlertDialog(
                 title=ft.Text("Acerca de", weight=ft.FontWeight.BOLD, text_align=ft.TextAlign.CENTER),
                 content=ft.Column([
-                    ft.Text("Mis Reales", size=18, weight=ft.FontWeight.BOLD),
+                    ft.Text("Bitácora Financiera", size=18, weight=ft.FontWeight.BOLD),
                     ft.Text("Versión 1.4\n\nControl y registro de finanzas personales.", size=14, text_align=ft.TextAlign.CENTER),
                 ], tight=True, horizontal_alignment=ft.CrossAxisAlignment.CENTER),
                 actions=[ft.TextButton("Cerrar", on_click=lambda e: page.close(dialogo_acerca))]
@@ -213,7 +213,7 @@ def main(page: ft.Page):
                     s_usd = ing_usd - egr_usd
                     s_bs = ing_bs - egr_bs
 
-                    reporte = f"📊 *REPORTE DE MIS REALES*\n\n👤 *Usuario:* {datos_usuario['nombre']} {datos_usuario['apellido']}\n\n"
+                    reporte = f"📊 *REPORTE DE BITÁCORA FINANCIERA*\n\n👤 *Usuario:* {datos_usuario['nombre']} {datos_usuario['apellido']}\n\n"
                     reporte += f"💵 *SALDO EN DÓLARES:* ${fmt(s_usd)}\n(+ Ingresos: ${fmt(ing_usd)} | - Egresos: ${fmt(egr_usd)})\n\n"
                     reporte += f"🇻🇪 *SALDO EN BOLÍVARES:* Bs {fmt(s_bs)}\n(+ Ingresos: Bs {fmt(ing_bs)} | - Egresos: Bs {fmt(egr_bs)})\n\n"
                     reporte += "*DETALLE DE MOVIMIENTOS:*\n"
